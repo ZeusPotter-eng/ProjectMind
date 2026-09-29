@@ -1,26 +1,40 @@
 import { useEffect, useState } from 'react'
-<<<<<<< HEAD
-import { getHealth } from './api/client'
+import { getHealth, getAssistantStatus } from './api/client'
 
 const TEAM_MEMBERS = [
   {
     id: 'jimmy',
     name: 'Jimmy',
-    role: 'Desarrollador del proyecto',
+    role: 'Desarrollador de ProjectMind',
     initials: 'JI',
   },
   {
     id: 'andy',
     name: 'Andy',
-    role: 'Desarrollador del proyecto',
+    role: 'Desarrollador de ProjectMind',
     initials: 'AN',
   },
   {
     id: 'zeus',
     name: 'Zeus',
-    role: 'Desarrollador del proyecto',
+    role: 'Desarrollador de ProjectMind',
     initials: 'ZE',
   },
+]
+
+const MODULES = [
+  ['Dashboard', 'Resumen de proyectos, pendientes, bloqueos y alertas.'],
+  ['Proyectos', 'Creación, consulta, administración e integrantes.'],
+  ['Tareas', 'Estados, responsables, fechas y seguimiento de avance.'],
+  ['Requisitos', 'Registro, revisión y trazabilidad de requisitos.'],
+  ['Dependencias', 'Relaciones entre tareas y análisis de afectaciones.'],
+  ['Bloqueos', 'Registro y resolución de impedimentos.'],
+  ['Documentos', 'Carga, procesamiento y recuperación mediante RAG.'],
+  ['Asistente IA', 'Chat contextual especializado en gestión de proyectos.'],
+  ['Reuniones', 'Audio, transcripción, minutas y elementos de seguimiento.'],
+  ['Propuestas IA', 'Aceptar, modificar o rechazar sugerencias generadas.'],
+  ['Reportes', 'Estado general, progreso, riesgos y resultados.'],
+  ['Auditoría', 'Trazabilidad de acciones relevantes dentro del sistema.'],
 ]
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024
@@ -37,8 +51,16 @@ function App() {
   const [backendStatus, setBackendStatus] = useState({
     loading: true,
     connected: false,
-    message: 'Comprobando conexión...',
+    message: 'Comprobando conexión con FastAPI...',
   })
+
+  const [assistantStatus, setAssistantStatus] = useState({
+    loading: true,
+    provider: '',
+    configured: false,
+    humanInTheLoop: true,
+  })
+
   const [memberPhotos, setMemberPhotos] = useState(() =>
     TEAM_MEMBERS.reduce(
       (photos, member) => ({
@@ -48,38 +70,58 @@ function App() {
       {},
     ),
   )
+
   const [photoMessages, setPhotoMessages] = useState({})
 
   useEffect(() => {
     let active = true
 
-    async function checkBackend() {
-      try {
-        const data = await getHealth()
+    async function checkSystem() {
+      const [healthResult, assistantResult] = await Promise.allSettled([
+        getHealth(),
+        getAssistantStatus(),
+      ])
 
-        if (active) {
-          setBackendStatus({
-            loading: false,
-            connected: data.status === 'ok',
-            message:
-              data.status === 'ok'
-                ? 'Frontend y backend están conectados.'
-                : 'El backend respondió con un estado inesperado.',
-          })
-        }
-      } catch {
-        if (active) {
-          setBackendStatus({
-            loading: false,
-            connected: false,
-            message:
-              'No fue posible conectar con FastAPI. Verifica que el backend esté ejecutándose en el puerto 8000.',
-          })
-        }
+      if (!active) return
+
+      if (healthResult.status === 'fulfilled') {
+        setBackendStatus({
+          loading: false,
+          connected: healthResult.value.status === 'ok',
+          message:
+            healthResult.value.status === 'ok'
+              ? 'Frontend y backend están conectados correctamente.'
+              : 'FastAPI respondió con un estado inesperado.',
+        })
+      } else {
+        setBackendStatus({
+          loading: false,
+          connected: false,
+          message:
+            'No fue posible conectar con FastAPI. Verifica la URL del backend.',
+        })
+      }
+
+      if (assistantResult.status === 'fulfilled') {
+        const data = assistantResult.value
+
+        setAssistantStatus({
+          loading: false,
+          provider: data.provider || '',
+          configured: Boolean(data.configured),
+          humanInTheLoop: data.human_in_the_loop !== false,
+        })
+      } else {
+        setAssistantStatus({
+          loading: false,
+          provider: '',
+          configured: false,
+          humanInTheLoop: true,
+        })
       }
     }
 
-    checkBackend()
+    checkSystem()
 
     return () => {
       active = false
@@ -118,6 +160,7 @@ function App() {
         ...photos,
         [memberId]: photo,
       }))
+
       setPhotoMessages((messages) => ({
         ...messages,
         [memberId]: 'Foto actualizada correctamente.',
@@ -142,6 +185,7 @@ function App() {
       ...photos,
       [memberId]: '',
     }))
+
     setPhotoMessages((messages) => ({
       ...messages,
       [memberId]: 'Foto eliminada.',
@@ -150,11 +194,11 @@ function App() {
     try {
       localStorage.removeItem(`projectmind-team-photo-${memberId}`)
     } catch {
-      // La interfaz sigue funcionando aunque el navegador bloquee localStorage.
+      // La interfaz continúa funcionando aunque localStorage esté bloqueado.
     }
   }
 
-  const statusClass = backendStatus.loading
+  const backendClass = backendStatus.loading
     ? 'status status--loading'
     : backendStatus.connected
       ? 'status status--online'
@@ -164,44 +208,150 @@ function App() {
     <main className="page-shell">
       <div className="content-wrapper">
         <section className="hero-card">
-          <span className="eyebrow">PROJECTMIND</span>
+          <div className="hero-content">
+            <span className="eyebrow">PROJECTMIND · MVP</span>
 
-          <h1>Base inicial del sistema</h1>
+            <h1>Gestión inteligente de proyectos</h1>
 
-          <p className="subtitle">
-            React + Vite en el frontend y FastAPI en el backend.
-          </p>
+            <p className="subtitle">
+              Plataforma para organizar proyectos, tareas, requisitos,
+              documentos, reuniones y análisis asistido por inteligencia
+              artificial.
+            </p>
 
-          <div className={statusClass}>
-            <span className="status__dot" aria-hidden="true" />
-            <div>
-              <strong>
-                {backendStatus.loading
-                  ? 'Verificando backend'
-                  : backendStatus.connected
-                    ? 'Backend conectado'
-                    : 'Backend sin conexión'}
-              </strong>
-              <p>{backendStatus.message}</p>
+            <div className={backendClass}>
+              <span className="status__dot" />
+
+              <div>
+                <strong>
+                  {backendStatus.loading
+                    ? 'Verificando backend'
+                    : backendStatus.connected
+                      ? 'Backend conectado'
+                      : 'Backend sin conexión'}
+                </strong>
+
+                <p>{backendStatus.message}</p>
+              </div>
             </div>
           </div>
 
-          <div className="next-step">
-            <strong>Primer objetivo</strong>
+          <div className="architecture-card">
+            <span>ARQUITECTURA BASE</span>
+
+            <strong>React + FastAPI</strong>
+
             <p>
-              Confirmar que ambas aplicaciones se comunican antes de integrar
-              Supabase, el asistente de IA, RAG y Speech-to-Text.
+              Supabase · PostgreSQL · pgvector · RAG · OpenAI · LM Studio
             </p>
           </div>
         </section>
 
-        <section className="team-section" aria-labelledby="team-title">
+        <section className="system-section">
+          <div className="section-heading">
+            <span className="eyebrow">ESTRUCTURA DEL MVP</span>
+            <h2>Módulos de ProjectMind</h2>
+            <p>
+              Estas áreas representan la estructura funcional definida para el
+              MVP y serán habilitadas conforme avance el desarrollo.
+            </p>
+          </div>
+
+          <div className="module-grid">
+            {MODULES.map(([name, description]) => (
+              <article className="module-card" key={name}>
+                <span className="module-tag">MÓDULO</span>
+                <h3>{name}</h3>
+                <p>{description}</p>
+                <span className="module-status">
+                  Pendiente de integración funcional
+                </span>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="integration-section">
+          <div className="section-heading">
+            <span className="eyebrow">INTEGRACIONES</span>
+            <h2>Configuración del sistema</h2>
+            <p>
+              Servicios principales contemplados dentro de la arquitectura de
+              ProjectMind.
+            </p>
+          </div>
+
+          <div className="integration-grid">
+            <article className="integration-card">
+              <span className="integration-number">01</span>
+              <h3>Supabase / PostgreSQL</h3>
+              <p>
+                Persistencia, autenticación, RLS, almacenamiento y pgvector.
+              </p>
+            </article>
+
+            <article className="integration-card">
+              <span className="integration-number">02</span>
+              <h3>OpenAI / LM Studio</h3>
+
+              {assistantStatus.loading ? (
+                <p>Consultando configuración del asistente...</p>
+              ) : (
+                <>
+                  <p>
+                    Proveedor:{' '}
+                    <strong>
+                      {assistantStatus.provider || 'No disponible'}
+                    </strong>
+                  </p>
+
+                  <span
+                    className={
+                      assistantStatus.configured
+                        ? 'integration-state integration-state--ok'
+                        : 'integration-state integration-state--pending'
+                    }
+                  >
+                    {assistantStatus.configured
+                      ? 'Proveedor configurado'
+                      : 'Falta configurar proveedor'}
+                  </span>
+                </>
+              )}
+            </article>
+
+            <article className="integration-card">
+              <span className="integration-number">03</span>
+              <h3>Human-in-the-Loop</h3>
+              <p>
+                La IA genera propuestas, pero las decisiones oficiales requieren
+                revisión y aprobación del usuario.
+              </p>
+
+              <span className="integration-state integration-state--ok">
+                {assistantStatus.humanInTheLoop
+                  ? 'Revisión humana habilitada'
+                  : 'Revisión pendiente'}
+              </span>
+            </article>
+
+            <article className="integration-card">
+              <span className="integration-number">04</span>
+              <h3>RAG</h3>
+              <p>
+                Recuperación de información desde documentos y contexto del
+                proyecto para mejorar las respuestas del asistente.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="team-section">
           <div className="section-heading">
             <span className="eyebrow">EQUIPO</span>
-            <h2 id="team-title">Integrantes del proyecto</h2>
+            <h2>Integrantes del proyecto</h2>
             <p>
-              Equipo responsable del desarrollo de ProjectMind. Cada integrante
-              puede agregar o cambiar su fotografía desde esta sección.
+              Equipo responsable del diseño y desarrollo de ProjectMind.
             </p>
           </div>
 
@@ -216,7 +366,7 @@ function App() {
                     {photo ? (
                       <img src={photo} alt={`Foto de ${member.name}`} />
                     ) : (
-                      <span aria-hidden="true">{member.initials}</span>
+                      <span>{member.initials}</span>
                     )}
                   </div>
 
@@ -231,8 +381,11 @@ function App() {
                       className="photo-input"
                       type="file"
                       accept="image/*"
-                      onChange={(event) => handlePhotoChange(member.id, event)}
+                      onChange={(event) =>
+                        handlePhotoChange(member.id, event)
+                      }
                     />
+
                     <label className="photo-button" htmlFor={inputId}>
                       {photo ? 'Cambiar foto' : 'Agregar foto'}
                     </label>
@@ -249,7 +402,7 @@ function App() {
                   </div>
 
                   {photoMessages[member.id] && (
-                    <p className="photo-message" role="status">
+                    <p className="photo-message">
                       {photoMessages[member.id]}
                     </p>
                   )}
@@ -259,34 +412,13 @@ function App() {
           </div>
 
           <p className="team-note">
-            Las fotografías se guardan únicamente en el navegador de este
-            dispositivo y no se envían al backend.
+            Las fotografías se almacenan únicamente en el navegador de este
+            dispositivo.
           </p>
         </section>
       </div>
     </main>
   )
 }
-=======
-import { getHealth, getAssistantStatus } from './api/client'
->>>>>>> 5e7e84b (feat(backend): create initial FastAPI structure for ProjectMind)
 
-const MODULES = [
- ['Dashboard','Resumen de proyectos, pendientes, bloqueos y alertas'], ['Proyectos','Creación, consulta e integrantes'],
- ['Tareas','Estados, responsables, fechas y avance'], ['Requisitos','Registro, revisión y trazabilidad'],
- ['Dependencias','Relaciones entre tareas y afectaciones'], ['Bloqueos','Registro y resolución de impedimentos'],
- ['Documentos','Carga, procesamiento y RAG'], ['Asistente IA','Chat contextual especializado'],
- ['Reuniones','Audio, transcripción, minuta y elementos'], ['Propuestas IA','Aceptar, modificar o rechazar sugerencias'],
- ['Reportes','Estado, progreso y riesgos'], ['Auditoría','Trazabilidad de acciones relevantes']
-]
-const TEAM=[['Jimmy','JI'],['Andy','AN'],['Zeus','ZE']]
-function App(){
- const [api,setApi]=useState({loading:true,ok:false,message:'Comprobando FastAPI...'})
- const [ai,setAi]=useState(null)
- useEffect(()=>{Promise.allSettled([getHealth(),getAssistantStatus()]).then(([h,a])=>{setApi(h.status==='fulfilled'?{loading:false,ok:h.value.status==='ok',message:'FastAPI responde correctamente.'}:{loading:false,ok:false,message:'Inicia el backend en el puerto 8000.'}); if(a.status==='fulfilled')setAi(a.value)})},[])
- return <main className="shell"><header className="hero"><div><span className="eyebrow">PROJECTMIND · MVP</span><h1>Gestión inteligente de proyectos</h1><p>Base inicial lista para integrar React + Vite con FastAPI, Supabase, RAG e IA.</p></div><div className={`status ${api.ok?'online':'offline'}`}><b>{api.loading?'Verificando backend':api.ok?'Backend conectado':'Backend sin conexión'}</b><span>{api.message}</span></div></header>
- <section><div className="heading"><span className="eyebrow">ESTRUCTURA DEL MVP</span><h2>Módulos preparados</h2><p>La interfaz deja visibles las áreas que se desarrollarán sobre esta base, sin simular datos oficiales.</p></div><div className="grid">{MODULES.map(([n,d])=><article className="card" key={n}><span className="card-tag">MÓDULO</span><h3>{n}</h3><p>{d}</p><span className="pending">Pendiente de integración funcional</span></article>)}</div></section>
- <section className="integration"><div><span className="eyebrow">INTEGRACIONES</span><h2>Configuración del sistema</h2></div><div className="integration-grid"><div><b>Supabase / PostgreSQL</b><p>Persistencia, Auth, RLS y pgvector desde el backend.</p></div><div><b>OpenAI / LM Studio</b><p>{ai?`Proveedor seleccionado: ${ai.provider}. ${ai.configured?'Configurado':'Falta configurar credenciales/modelo'}.`:'El estado se mostrará al conectar FastAPI.'}</p></div><div><b>Human-in-the-Loop</b><p>Las salidas de IA serán propuestas hasta la aprobación del usuario.</p></div></div></section>
- <section><div className="heading"><span className="eyebrow">EQUIPO</span><h2>Integrantes</h2></div><div className="team">{TEAM.map(([n,i])=><article className="person" key={n}><div className="avatar">{i}</div><div><h3>{n}</h3><p>Desarrollo de ProjectMind</p></div></article>)}</div></section>
- </main>}
 export default App
