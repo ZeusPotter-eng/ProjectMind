@@ -1,31 +1,8 @@
 # ProjectMind Frontend
-
-Frontend inicial con React + Vite.
-
-## Instalación
+Base React + Vite alineada al MVP. La pantalla inicial comprueba FastAPI y presenta los módulos e integraciones previstas sin exponer secretos.
 
 ```bash
 npm install
-```
-
-Copiar:
-
-```text
-.env.example -> .env
-```
-
-Ejecutar:
-
-```bash
 npm run dev
 ```
-
-Abrir:
-
-`http://localhost:5173`
-
-La pantalla consulta el endpoint:
-
-`GET /api/v1/health`
-
-para verificar la comunicación con FastAPI.
+Copia `.env.example` a `.env` si necesitas cambiar la URL del backend. El frontend solo necesita `VITE_API_URL`; las claves de OpenAI/Supabase service-role pertenecen al backend.

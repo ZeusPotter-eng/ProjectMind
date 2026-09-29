@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+<<<<<<< HEAD
 import { getHealth } from './api/client'
 
 const TEAM_MEMBERS = [
@@ -266,5 +267,26 @@ function App() {
     </main>
   )
 }
+=======
+import { getHealth, getAssistantStatus } from './api/client'
+>>>>>>> 5e7e84b (feat(backend): create initial FastAPI structure for ProjectMind)
 
+const MODULES = [
+ ['Dashboard','Resumen de proyectos, pendientes, bloqueos y alertas'], ['Proyectos','Creación, consulta e integrantes'],
+ ['Tareas','Estados, responsables, fechas y avance'], ['Requisitos','Registro, revisión y trazabilidad'],
+ ['Dependencias','Relaciones entre tareas y afectaciones'], ['Bloqueos','Registro y resolución de impedimentos'],
+ ['Documentos','Carga, procesamiento y RAG'], ['Asistente IA','Chat contextual especializado'],
+ ['Reuniones','Audio, transcripción, minuta y elementos'], ['Propuestas IA','Aceptar, modificar o rechazar sugerencias'],
+ ['Reportes','Estado, progreso y riesgos'], ['Auditoría','Trazabilidad de acciones relevantes']
+]
+const TEAM=[['Jimmy','JI'],['Andy','AN'],['Zeus','ZE']]
+function App(){
+ const [api,setApi]=useState({loading:true,ok:false,message:'Comprobando FastAPI...'})
+ const [ai,setAi]=useState(null)
+ useEffect(()=>{Promise.allSettled([getHealth(),getAssistantStatus()]).then(([h,a])=>{setApi(h.status==='fulfilled'?{loading:false,ok:h.value.status==='ok',message:'FastAPI responde correctamente.'}:{loading:false,ok:false,message:'Inicia el backend en el puerto 8000.'}); if(a.status==='fulfilled')setAi(a.value)})},[])
+ return <main className="shell"><header className="hero"><div><span className="eyebrow">PROJECTMIND · MVP</span><h1>Gestión inteligente de proyectos</h1><p>Base inicial lista para integrar React + Vite con FastAPI, Supabase, RAG e IA.</p></div><div className={`status ${api.ok?'online':'offline'}`}><b>{api.loading?'Verificando backend':api.ok?'Backend conectado':'Backend sin conexión'}</b><span>{api.message}</span></div></header>
+ <section><div className="heading"><span className="eyebrow">ESTRUCTURA DEL MVP</span><h2>Módulos preparados</h2><p>La interfaz deja visibles las áreas que se desarrollarán sobre esta base, sin simular datos oficiales.</p></div><div className="grid">{MODULES.map(([n,d])=><article className="card" key={n}><span className="card-tag">MÓDULO</span><h3>{n}</h3><p>{d}</p><span className="pending">Pendiente de integración funcional</span></article>)}</div></section>
+ <section className="integration"><div><span className="eyebrow">INTEGRACIONES</span><h2>Configuración del sistema</h2></div><div className="integration-grid"><div><b>Supabase / PostgreSQL</b><p>Persistencia, Auth, RLS y pgvector desde el backend.</p></div><div><b>OpenAI / LM Studio</b><p>{ai?`Proveedor seleccionado: ${ai.provider}. ${ai.configured?'Configurado':'Falta configurar credenciales/modelo'}.`:'El estado se mostrará al conectar FastAPI.'}</p></div><div><b>Human-in-the-Loop</b><p>Las salidas de IA serán propuestas hasta la aprobación del usuario.</p></div></div></section>
+ <section><div className="heading"><span className="eyebrow">EQUIPO</span><h2>Integrantes</h2></div><div className="team">{TEAM.map(([n,i])=><article className="person" key={n}><div className="avatar">{i}</div><div><h3>{n}</h3><p>Desarrollo de ProjectMind</p></div></article>)}</div></section>
+ </main>}
 export default App
