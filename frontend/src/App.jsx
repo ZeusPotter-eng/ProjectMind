@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getHealth, getAssistantStatus } from './api/client'
+import CrudConsole from './components/CrudConsole'
 
 const TEAM_MEMBERS = [
   {
@@ -344,6 +345,19 @@ function App() {
               </p>
             </article>
           </div>
+        </section>
+
+        <section className="crud-section">
+          <div className="section-heading">
+            <span className="eyebrow">CRUD · VERIFICACIÓN</span>
+            <h2>Consola de base de datos</h2>
+            <p>
+              Verifica desde el frontend las operaciones Create, Read, Update y
+              Delete sobre las tablas del dominio ProjectMind.
+            </p>
+          </div>
+
+          <CrudConsole />
         </section>
 
         <section className="team-section">
