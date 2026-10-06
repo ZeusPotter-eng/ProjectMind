@@ -30,6 +30,7 @@ function crudRequest(path, options = {}) {
 }
 
 export const getHealth = () => request('/health')
+export const getSupabaseHealth = () => request('/health/supabase')
 export const getModuleStatus = (module) => request(`/${module}/status`)
 export const getAssistantStatus = () => request('/assistant/status')
 export const sendAssistantMessage = (message, projectId = null) =>

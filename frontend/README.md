@@ -1,8 +1,10 @@
 # ProjectMind Frontend
 
-Frontend React + Vite del MVP de ProjectMind. Incluye comprobación del backend, resumen de módulos, integrantes y una consola CRUD para verificar la base de datos desde el navegador durante desarrollo.
+Frontend React + Vite del MVP de ProjectMind. Para PM-11 muestra tanto el estado de FastAPI como el estado real de Supabase consultado a través del backend.
 
 ## 1. Instalar
+
+No copies `node_modules` entre equipos. Instala las dependencias a partir del lockfile:
 
 ```powershell
 npm install
@@ -10,15 +12,13 @@ npm install
 
 ## 2. Configurar `.env`
 
-Copia `.env.example` como `.env`:
-
 ```env
 VITE_API_URL=http://localhost:8000/api/v1
-VITE_ENABLE_CRUD_CONSOLE=true
-VITE_CRUD_CONSOLE_TOKEN=EL_MISMO_VALOR_DE_CRUD_CONSOLE_TOKEN_DEL_BACKEND
+VITE_ENABLE_CRUD_CONSOLE=false
+VITE_CRUD_CONSOLE_TOKEN=
 ```
 
-`VITE_CRUD_CONSOLE_TOKEN` es únicamente el token local que protege la consola de desarrollo. Nunca coloques `SUPABASE_SECRET_KEY`, `service_role` ni claves de OpenAI en el frontend.
+El frontend **no necesita ni debe contener** `SUPABASE_SECRET_KEY`, `service_role` ni claves de OpenAI.
 
 ## 3. Ejecutar
 
@@ -28,15 +28,14 @@ npm run dev
 
 Abre `http://localhost:5173`.
 
-## Probar CRUD
+En **Configuración del sistema → Supabase / PostgreSQL** debe aparecer:
 
-En la sección **CRUD · Verificación** podrás:
+**Supabase conectado**
 
-- Seleccionar cualquiera de las 24 tablas de ProjectMind.
-- Consultar registros.
-- Crear registros con un editor JSON y campos obligatorios sugeridos.
-- Editar registros existentes.
-- Eliminar registros con confirmación.
-- Trabajar correctamente con claves primarias simples y compuestas.
+Eso confirma el flujo:
 
-Las llaves foráneas deben apuntar a registros existentes. Por ejemplo, antes de crear una tarea debe existir el proyecto y el usuario indicado en sus campos relacionados.
+`React → FastAPI → Supabase → RPC de diagnóstico → FastAPI → React`
+
+## Consola CRUD
+
+La consola CRUD es una herramienta separada de desarrollo. Solo se habilita cuando el backend dispone de una llave administrativa y un token local. PM-11 no expone esa llave en Vite.

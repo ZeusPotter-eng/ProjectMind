@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getHealth, getAssistantStatus } from './api/client'
+import { getHealth, getSupabaseHealth, getAssistantStatus } from './api/client'
 import CrudConsole from './components/CrudConsole'
 
 const TEAM_MEMBERS = [
@@ -62,6 +62,12 @@ function App() {
     humanInTheLoop: true,
   })
 
+  const [supabaseStatus, setSupabaseStatus] = useState({
+    loading: true,
+    connected: false,
+    message: 'Comprobando conexión con Supabase...',
+  })
+
   const [memberPhotos, setMemberPhotos] = useState(() =>
     TEAM_MEMBERS.reduce(
       (photos, member) => ({
@@ -78,8 +84,9 @@ function App() {
     let active = true
 
     async function checkSystem() {
-      const [healthResult, assistantResult] = await Promise.allSettled([
+      const [healthResult, supabaseResult, assistantResult] = await Promise.allSettled([
         getHealth(),
+        getSupabaseHealth(),
         getAssistantStatus(),
       ])
 
@@ -100,6 +107,23 @@ function App() {
           connected: false,
           message:
             'No fue posible conectar con FastAPI. Verifica la URL del backend.',
+        })
+      }
+
+      if (supabaseResult.status === 'fulfilled') {
+        const data = supabaseResult.value
+        setSupabaseStatus({
+          loading: false,
+          connected: Boolean(data.connected),
+          message: data.connected
+            ? 'FastAPI y Supabase están conectados correctamente.'
+            : 'Supabase respondió sin confirmar la conexión.',
+        })
+      } else {
+        setSupabaseStatus({
+          loading: false,
+          connected: false,
+          message: 'No fue posible verificar Supabase desde FastAPI.',
         })
       }
 
@@ -289,6 +313,22 @@ function App() {
               <p>
                 Persistencia, autenticación, RLS, almacenamiento y pgvector.
               </p>
+
+              <span
+                className={
+                  supabaseStatus.connected
+                    ? 'integration-state integration-state--ok'
+                    : 'integration-state integration-state--pending'
+                }
+              >
+                {supabaseStatus.loading
+                  ? 'Verificando Supabase'
+                  : supabaseStatus.connected
+                    ? 'Supabase conectado'
+                    : 'Supabase pendiente'}
+              </span>
+
+              <p className="integration-detail">{supabaseStatus.message}</p>
             </article>
 
             <article className="integration-card">

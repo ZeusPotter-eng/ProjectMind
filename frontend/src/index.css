@@ -295,6 +295,12 @@ h3 {
   background: #fff7df;
 }
 
+.integration-card .integration-detail {
+  margin-top: 10px;
+  font-size: 0.86rem;
+  color: #71808f;
+}
+
 .team-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
