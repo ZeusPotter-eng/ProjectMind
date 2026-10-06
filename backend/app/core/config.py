@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     supabase_secret_key: str | None = None
     supabase_service_role_key: str | None = None
 
+    # Consola CRUD de verificación.
+    # ENABLE_CRUD_CONSOLE es la variable recomendada. CRUD_CONSOLE_ENABLED se
+    # conserva temporalmente para no romper configuraciones locales anteriores.
+    enable_crud_console: bool = False
     crud_console_enabled: bool = False
     crud_console_token: str | None = None
 
@@ -35,6 +39,11 @@ class Settings(BaseSettings):
     def supabase_client_key(self) -> str | None:
         """Llave pública para llamadas sujetas a RLS/Data API."""
         return self.supabase_publishable_key or self.supabase_anon_key
+
+    @property
+    def crud_console_is_enabled(self) -> bool:
+        """Activa la consola mediante la variable nueva o la legacy."""
+        return self.enable_crud_console or self.crud_console_enabled
 
 
 @lru_cache

@@ -52,3 +52,18 @@ Resultado esperado en `http://localhost:5173`:
 - **Supabase conectado**
 
 Con esas dos señales PM-11 cumple su criterio de aceptación y puede continuar PM-12.
+
+## Verificación temporal en Render (producción)
+
+Para poder ejecutar la consola CRUD durante la validación de PM-11 sin cambiar `APP_ENV=production`, el backend acepta ahora un interruptor explícito:
+
+```env
+APP_ENV=production
+ENABLE_CRUD_CONSOLE=true
+CRUD_CONSOLE_TOKEN=<token de verificación>
+SUPABASE_SECRET_KEY=<secret key solo backend>
+```
+
+La consola permanece protegida por dos condiciones adicionales: token correcto en `X-CRUD-Token` y presencia de una llave administrativa únicamente en FastAPI. La variable legacy `CRUD_CONSOLE_ENABLED` se mantiene temporalmente por compatibilidad.
+
+**Cierre de verificación:** una vez terminadas las pruebas CRUD en Render, volver a `ENABLE_CRUD_CONSOLE=false` y `VITE_ENABLE_CRUD_CONSOLE=false`.

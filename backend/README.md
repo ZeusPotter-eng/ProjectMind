@@ -59,15 +59,26 @@ Las 24 tablas tienen RLS habilitado. El rol `anon` no tiene acceso directo a ell
 
 ## CRUD de desarrollo
 
-La consola CRUD sigue disponible para verificaciones administrativas, pero está **deshabilitada por defecto**. Para activarla en desarrollo debes configurar una llave secreta exclusivamente en FastAPI:
+La consola CRUD sigue **deshabilitada por defecto**. Para habilitarla de forma explícita —incluido un despliegue temporal de verificación en Render con `APP_ENV=production`— configura únicamente en FastAPI:
 
 ```env
+APP_ENV=production
 SUPABASE_SECRET_KEY=TU_SECRET_KEY_DE_BACKEND
-CRUD_CONSOLE_ENABLED=true
-CRUD_CONSOLE_TOKEN=UN_TOKEN_LOCAL_LARGO_Y_ALEATORIO
+ENABLE_CRUD_CONSOLE=true
+CRUD_CONSOLE_TOKEN=UN_TOKEN_LARGO_Y_ALEATORIO
 ```
 
-También se acepta `SUPABASE_SERVICE_ROLE_KEY` como compatibilidad legacy. Nunca coloques estas llaves en el frontend.
+`ENABLE_CRUD_CONSOLE=true` es ahora el interruptor explícito de la consola; `APP_ENV=production` ya no la bloquea automáticamente. El endpoint sigue exigiendo `CRUD_CONSOLE_TOKEN` y una llave administrativa de Supabase. También se acepta `SUPABASE_SERVICE_ROLE_KEY` como compatibilidad legacy. Nunca coloques la llave administrativa en el frontend.
+
+En el frontend de Render, para la etapa de verificación, configura:
+
+```env
+VITE_ENABLE_CRUD_CONSOLE=true
+VITE_CRUD_CONSOLE_TOKEN=EL_MISMO_VALOR_DE_CRUD_CONSOLE_TOKEN
+VITE_API_URL=https://TU-BACKEND.onrender.com
+```
+
+> `VITE_CRUD_CONSOLE_TOKEN` queda visible en el bundle del navegador. Esta consola es exclusivamente temporal para verificación; al finalizar las pruebas cambia `ENABLE_CRUD_CONSOLE=false` y `VITE_ENABLE_CRUD_CONSOLE=false`.
 
 ## PM-11
 

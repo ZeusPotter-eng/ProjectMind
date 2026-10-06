@@ -25,16 +25,13 @@ router = APIRouter(prefix="/crud", tags=["Development CRUD"])
 def require_crud_console(x_crud_token: str | None = Header(default=None)) -> None:
     settings = get_settings()
 
-    if settings.app_env.lower() == "production":
+    if not settings.crud_console_is_enabled:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="La consola CRUD está bloqueada en APP_ENV=production.",
-        )
-
-    if not settings.crud_console_enabled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="La consola CRUD está deshabilitada. Configura CRUD_CONSOLE_ENABLED=true solo en desarrollo.",
+            detail=(
+                "La consola CRUD está deshabilitada. "
+                "Configura ENABLE_CRUD_CONSOLE=true para habilitarla explícitamente."
+            ),
         )
 
     if not settings.crud_console_token:
@@ -79,7 +76,10 @@ async def crud_status() -> dict:
     return {
         "module": "crud",
         "environment": settings.app_env,
-        "enabled": bool(settings.crud_console_enabled and settings.app_env.lower() != "production"),
+        "enabled": settings.crud_console_is_enabled,
+        "production_override": bool(
+            settings.app_env.lower() == "production" and settings.crud_console_is_enabled
+        ),
         "token_configured": bool(settings.crud_console_token),
         "admin_key_configured": bool(settings.supabase_secret_key or settings.supabase_service_role_key),
         "resource_count": len(list_resources()),
