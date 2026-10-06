@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:5173"
 
     supabase_url: str | None = None
+    supabase_publishable_key: str | None = None
+    # Compatibilidad con proyectos/configuraciones legacy.
     supabase_anon_key: str | None = None
     supabase_secret_key: str | None = None
     supabase_service_role_key: str | None = None
@@ -28,6 +30,11 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def supabase_client_key(self) -> str | None:
+        """Llave pública para llamadas sujetas a RLS/Data API."""
+        return self.supabase_publishable_key or self.supabase_anon_key
 
 
 @lru_cache

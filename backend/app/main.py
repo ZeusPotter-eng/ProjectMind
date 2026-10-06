@@ -23,7 +23,7 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.3.0",
+    version="0.4.0",
     description="API base del MVP de ProjectMind con consola CRUD de desarrollo.",
 )
 
@@ -59,6 +59,6 @@ async def root():
     return {
         "name": settings.app_name,
         "environment": settings.app_env,
-        "version": "0.3.0",
+        "version": "0.4.0",
         "docs": "/docs",
     }

@@ -1,6 +1,6 @@
 # ProjectMind Backend
 
-Backend FastAPI del MVP de ProjectMind. Incluye configuración, CORS, health check, integración Supabase, adaptador OpenAI/LM Studio, routers de módulos y una consola CRUD administrativa para verificar la base de datos durante desarrollo.
+Backend FastAPI del MVP de ProjectMind. La etapa **PM-11 — Configurar Supabase y base de datos** queda preparada para verificar la cadena React → FastAPI → Supabase sin exponer tablas ni llaves administrativas.
 
 ## 1. Crear el entorno
 
@@ -12,25 +12,17 @@ pip install -r requirements.txt
 
 ## 2. Configurar variables
 
-Copia `.env.example` como `.env` y agrega tus valores reales. No subas `.env` a Git.
-
-Para usar el CRUD necesitas, como mínimo:
+Copia `.env.example` como `.env`. Para PM-11 necesitas:
 
 ```env
 APP_ENV=development
 SUPABASE_URL=https://TU-PROYECTO.supabase.co
-SUPABASE_SECRET_KEY=TU_SECRET_KEY_DE_BACKEND
-CRUD_CONSOLE_ENABLED=true
-CRUD_CONSOLE_TOKEN=UN_TOKEN_LOCAL_LARGO_Y_ALEATORIO
+SUPABASE_PUBLISHABLE_KEY=TU_PUBLISHABLE_KEY
 ```
 
-También se acepta `SUPABASE_SERVICE_ROLE_KEY` como compatibilidad legacy. La llave administrativa nunca debe ir en React/Vite.
+`SUPABASE_PUBLISHABLE_KEY` se usa para operaciones sujetas a RLS. La `SUPABASE_SECRET_KEY`/`service_role` queda reservada exclusivamente para tareas administrativas del backend y nunca debe colocarse en React/Vite.
 
-Puedes generar el token local así:
-
-```powershell
-python -c "import secrets; print(secrets.token_urlsafe(32))"
-```
+La copia entregada de PM-11 ya incluye el URL y publishable key del proyecto ProjectMind en el `.env` local. `.env` continúa ignorado por Git.
 
 ## 3. Ejecutar
 
@@ -38,33 +30,50 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 uvicorn app.main:app --reload
 ```
 
-- Health: `http://localhost:8000/api/v1/health`
-- Estado CRUD: `http://localhost:8000/api/v1/crud/status`
+Verificaciones:
+
+- Backend: `http://localhost:8000/api/v1/health`
+- Supabase: `http://localhost:8000/api/v1/health/supabase`
 - Swagger: `http://localhost:8000/docs`
 
-## CRUD de desarrollo
+La ruta `/health/supabase` ejecuta `projectmind_connection_check()` en Supabase. El RPC es `SECURITY INVOKER`, no abre tablas del MVP y no utiliza una llave administrativa.
 
-El CRUD cubre 24 tablas del dominio ProjectMind:
+Respuesta esperada:
+
+```json
+{
+  "status": "ok",
+  "service": "supabase",
+  "connected": true,
+  "rls_mode": "enabled"
+}
+```
+
+## Estado de la base de datos
+
+ProjectMind cuenta con 24 recursos de dominio registrados en el backend:
 
 `profiles`, `projects`, `project_members`, `project_invitations`, `tasks`, `task_assignees`, `task_dependencies`, `task_updates`, `blockers`, `requirements`, `documents`, `task_requirements`, `document_chunks`, `meetings`, `meeting_participants`, `meeting_transcripts`, `meeting_items`, `ai_runs`, `rag_retrievals`, `ai_suggestions`, `conversations`, `messages`, `project_reports` y `audit_logs`.
 
-Las tablas antiguas que existen en el mismo proyecto Supabase pero pertenecen a otro sistema no se exponen desde este CRUD.
+Las 24 tablas tienen RLS habilitado. El rol `anon` no tiene acceso directo a ellas. `pgvector` está instalado para la etapa posterior de RAG.
 
-Endpoints:
+## CRUD de desarrollo
 
-- `GET /api/v1/crud/resources`
-- `GET /api/v1/crud/{recurso}`
-- `POST /api/v1/crud/{recurso}/lookup`
-- `POST /api/v1/crud/{recurso}`
-- `PATCH /api/v1/crud/{recurso}`
-- `DELETE /api/v1/crud/{recurso}`
+La consola CRUD sigue disponible para verificaciones administrativas, pero está **deshabilitada por defecto**. Para activarla en desarrollo debes configurar una llave secreta exclusivamente en FastAPI:
 
-Todos los endpoints administrativos, excepto `/crud/status`, requieren el header `X-CRUD-Token`.
+```env
+SUPABASE_SECRET_KEY=TU_SECRET_KEY_DE_BACKEND
+CRUD_CONSOLE_ENABLED=true
+CRUD_CONSOLE_TOKEN=UN_TOKEN_LOCAL_LARGO_Y_ALEATORIO
+```
 
-### Seguridad
+También se acepta `SUPABASE_SERVICE_ROLE_KEY` como compatibilidad legacy. Nunca coloques estas llaves en el frontend.
 
-La consola se bloquea automáticamente cuando `APP_ENV=production`. Está diseñada para pruebas y validación del desarrollo, no como panel administrativo público. La `SUPABASE_SECRET_KEY`/`service_role` permanece exclusivamente en FastAPI.
+## PM-11
 
-## IA
+Se considera cerrado cuando:
 
-`AI_PROVIDER=openai` usa `OPENAI_API_KEY`. Para LM Studio usa `AI_PROVIDER=lmstudio`, inicia su servidor local compatible con OpenAI y configura `LM_STUDIO_MODEL`.
+1. El backend responde `/api/v1/health` con `status=ok`.
+2. `/api/v1/health/supabase` responde `connected=true`.
+3. El frontend muestra **Backend conectado** y **Supabase conectado**.
+4. Las 24 tablas ProjectMind permanecen protegidas por RLS.
