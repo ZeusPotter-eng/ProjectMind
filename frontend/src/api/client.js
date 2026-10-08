@@ -67,3 +67,11 @@ export const deleteCrudRow = (resource, key) =>
     method: 'DELETE',
     body: JSON.stringify({ key }),
   })
+
+// PM-12: Las credenciales se envían al backend, nunca a una llave administrativa.
+export const getAuthStatus = () => request('/auth/status')
+export const registerUser = (email, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) })
+export const loginUser = (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+export const refreshSession = (refresh_token) => request('/auth/refresh', { method: 'POST', body: JSON.stringify({ refresh_token }) })
+export const getCurrentUser = (token) => request('/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+export const logoutUser = (token) => request('/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
