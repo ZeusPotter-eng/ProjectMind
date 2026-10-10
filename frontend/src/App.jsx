@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getHealth, getSupabaseHealth, getAssistantStatus } from './api/client'
 import CrudConsole from './components/CrudConsole'
+import ProjectsPage from './components/ProjectsPage'
 
 const TEAM_MEMBERS = [
   { id: 'jimmy', name: 'Jimmy', role: 'Desarrollador de ProjectMind', initials: 'JI' },
@@ -37,7 +38,7 @@ function getStoredPhoto(memberId) {
   try { return localStorage.getItem(`projectmind-team-photo-${memberId}`) || '' } catch { return '' }
 }
 
-function App() {
+function App({ getAccessToken, currentUser }) {
   const [activeModule, setActiveModule] = useState('Dashboard')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [backendStatus, setBackendStatus] = useState({ loading: true, connected: false, message: 'Comprobando conexión con FastAPI...' })
@@ -168,7 +169,7 @@ function App() {
     {mobileMenuOpen && <button className="sidebar-overlay" aria-label="Cerrar menú" onClick={()=>setMobileMenuOpen(false)}/>} 
     <div className="main-shell">
       <header className="topbar"><button className="menu-button" onClick={()=>setMobileMenuOpen(true)}>◆</button><div><small>ProjectMind /</small><strong>{activeModule}</strong></div><div className="topbar-actions"><span className={backendClass}><span className="status-dot"/>{backendStatus.connected?'Online':'Offline'}</span><div className="user-avatar">PM</div></div></header>
-      <main className="workspace">{activeModule==='Dashboard' ? <Dashboard/> : activeModule==='Configuración' ? <SettingsPage/> : activeModule==='Consola CRUD' ? <CrudPage/> : <ModulePage/>}</main>
+      <main className="workspace">{activeModule==='Dashboard' ? <Dashboard/> : activeModule==='Configuración' ? <SettingsPage/> : activeModule==='Consola CRUD' ? <CrudPage/> : activeModule==='Proyectos' ? <ProjectsPage getAccessToken={getAccessToken} currentUserId={currentUser?.id}/> : <ModulePage/>}</main>
     </div>
   </div>
 }

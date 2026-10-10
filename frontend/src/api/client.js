@@ -75,3 +75,21 @@ export const loginUser = (email, password) => request('/auth/login', { method: '
 export const refreshSession = (refresh_token) => request('/auth/refresh', { method: 'POST', body: JSON.stringify({ refresh_token }) })
 export const getCurrentUser = (token) => request('/auth/me', { headers: { Authorization: `Bearer ${token}` } })
 export const logoutUser = (token) => request('/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+
+// PM-13: proyectos con Supabase Auth + RLS. Nunca se expone service_role.
+async function projectsRequest(path, getAccessToken, options = {}) {
+  const token = await getAccessToken()
+  return request(path, {
+    ...options,
+    headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) },
+  })
+}
+
+export const listProjects = (getAccessToken, { includeArchived = false, limit = 100, offset = 0 } = {}) =>
+  projectsRequest(`/projects?include_archived=${includeArchived}&limit=${limit}&offset=${offset}`, getAccessToken)
+export const createProject = (getAccessToken, data) =>
+  projectsRequest('/projects', getAccessToken, { method: 'POST', body: JSON.stringify(data) })
+export const updateProject = (getAccessToken, id, data) =>
+  projectsRequest(`/projects/${encodeURIComponent(id)}`, getAccessToken, { method: 'PATCH', body: JSON.stringify(data) })
+export const archiveProject = (getAccessToken, id) =>
+  projectsRequest(`/projects/${encodeURIComponent(id)}/archive`, getAccessToken, { method: 'PATCH' })

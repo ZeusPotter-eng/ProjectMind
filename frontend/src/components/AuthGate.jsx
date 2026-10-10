@@ -1,18 +1,24 @@
-import { useEffect, useState } from 'react'
+import { cloneElement, useCallback, useEffect, useRef, useState } from 'react'
 import { getAuthStatus, getCurrentUser, loginUser, logoutUser, refreshSession, registerUser } from '../api/client'
 import './auth.css'
 
 const STORAGE_KEY = 'projectmind-session-v1'
 
+function normalizeSession(value) {
+  return { ...value, expires_at: value?.expires_at || Math.floor(Date.now() / 1000) + (value?.expires_in || 3600) }
+}
+
 function saveSession(value) {
   if (value?.access_token && value?.refresh_token) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ access_token: value.access_token, refresh_token: value.refresh_token }))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ access_token: value.access_token, refresh_token: value.refresh_token, expires_at: normalizeSession(value).expires_at }))
   }
 }
 
 function clearSession() { localStorage.removeItem(STORAGE_KEY) }
 
 export default function AuthGate({ children }) {
+  const sessionRef = useRef(null)
+  const refreshPromise = useRef(null)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
   const [session, setSession] = useState(null)
@@ -35,10 +41,11 @@ export default function AuthGate({ children }) {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null')
         if (!stored?.refresh_token) return
         // Renovar primero evita confiar en JWT caducados guardados localmente.
-        const next = await refreshSession(stored.refresh_token)
+        const next = normalizeSession(await refreshSession(stored.refresh_token))
         const profile = await getCurrentUser(next.access_token)
         if (!current) return
         saveSession(next)
+        sessionRef.current = next
         setSession(next)
         setUser(profile)
       } catch {
@@ -56,7 +63,7 @@ export default function AuthGate({ children }) {
     if (busy) return
     setBusy(true); setError(''); setNotice('')
     try {
-      const result = mode === 'login' ? await loginUser(email.trim(), password) : await registerUser(email.trim(), password)
+      const result = normalizeSession(mode === 'login' ? await loginUser(email.trim(), password) : await registerUser(email.trim(), password))
       if (!result.access_token) {
         setNotice('Registro recibido. Revisa tu correo y confirma tu cuenta antes de iniciar sesión.')
         setMode('login'); setPassword('')
@@ -64,6 +71,7 @@ export default function AuthGate({ children }) {
       }
       const profile = await getCurrentUser(result.access_token)
       saveSession(result)
+      sessionRef.current = result
       setSession(result); setUser(profile); setPassword('')
     } catch (err) {
       setError(err.message || 'No fue posible completar la solicitud.')
@@ -72,12 +80,39 @@ export default function AuthGate({ children }) {
 
   async function logout() {
     const token = session?.access_token
-    clearSession(); setSession(null); setUser(null); setPassword('')
+    clearSession(); sessionRef.current = null; setSession(null); setUser(null); setPassword('')
     if (token) { try { await logoutUser(token) } catch { /* Ya cerramos la sesión local */ } }
   }
 
+  // PM-13: entrega un token vigente a las solicitudes de proyectos.
+  const getAccessToken = useCallback(async () => {
+    const current = sessionRef.current
+    if (!current?.access_token) throw new Error('Inicia sesión nuevamente.')
+    const expiration = current.expires_at || Math.floor(Date.now() / 1000) + (current.expires_in || 0)
+    if (expiration > Math.floor(Date.now() / 1000) + 45) return current.access_token
+    if (!refreshPromise.current) {
+      refreshPromise.current = refreshSession(current.refresh_token)
+        .then(raw => {
+          const next = normalizeSession(raw)
+          sessionRef.current = next
+          saveSession(next)
+          setSession(next)
+          return next.access_token
+        })
+        .catch(() => {
+          clearSession()
+          sessionRef.current = null
+          setSession(null)
+          setUser(null)
+          throw new Error('Tu sesión expiró. Inicia sesión de nuevo.')
+        })
+        .finally(() => { refreshPromise.current = null })
+    }
+    return refreshPromise.current
+  }, [])
+
   if (loading) return <main className="auth-screen"><div className="auth-card"><span className="auth-symbol">PM</span><h1>Verificando sesión…</h1></div></main>
-  if (user) return <><div className="auth-identity" title={user.email}><span>{user.email}</span><button onClick={logout}>Cerrar sesión</button></div>{children}</>
+  if (user) return <><div className="auth-identity" title={user.email}><span>{user.email}</span><button onClick={logout}>Cerrar sesión</button></div>{cloneElement(children, { currentUser: user, getAccessToken })}</>
 
   return <main className="auth-screen"><section className="auth-card">
     <span className="auth-symbol">PM</span>
