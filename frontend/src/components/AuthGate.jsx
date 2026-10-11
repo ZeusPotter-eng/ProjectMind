@@ -29,6 +29,7 @@ export default function AuthGate({ children }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [idCopied, setIdCopied] = useState(false)
 
   useEffect(() => {
     let current = true
@@ -72,7 +73,7 @@ export default function AuthGate({ children }) {
       const profile = await getCurrentUser(result.access_token)
       saveSession(result)
       sessionRef.current = result
-      setSession(result); setUser(profile); setPassword('')
+      setSession(result); setUser(profile); setPassword(''); setIdCopied(false)
     } catch (err) {
       setError(err.message || 'No fue posible completar la solicitud.')
     } finally { setBusy(false) }
@@ -80,7 +81,7 @@ export default function AuthGate({ children }) {
 
   async function logout() {
     const token = session?.access_token
-    clearSession(); sessionRef.current = null; setSession(null); setUser(null); setPassword('')
+    clearSession(); sessionRef.current = null; setSession(null); setUser(null); setPassword(''); setIdCopied(false)
     if (token) { try { await logoutUser(token) } catch { /* Ya cerramos la sesión local */ } }
   }
 
@@ -112,7 +113,14 @@ export default function AuthGate({ children }) {
   }, [])
 
   if (loading) return <main className="auth-screen"><div className="auth-card"><span className="auth-symbol">PM</span><h1>Verificando sesión…</h1></div></main>
-  if (user) return <><div className="auth-identity" title={user.email}><span>{user.email}</span><button onClick={logout}>Cerrar sesión</button></div>{cloneElement(children, { currentUser: user, getAccessToken })}</>
+  async function copyMyId() {
+    try {
+      await navigator.clipboard.writeText(user.id)
+      setIdCopied(true)
+    } catch { setIdCopied(false); window.prompt('Copia tu identificador de usuario:', user.id) }
+  }
+
+  if (user) return <><div className="auth-identity" title={user.email}><span>{user.email}</span><button type="button" title="Comparte este ID para que te agreguen a un proyecto" onClick={copyMyId}>{idCopied ? 'ID copiado' : 'Copiar mi ID'}</button><button onClick={logout}>Cerrar sesión</button></div>{cloneElement(children, { currentUser: user, getAccessToken })}</>
 
   return <main className="auth-screen"><section className="auth-card">
     <span className="auth-symbol">PM</span>

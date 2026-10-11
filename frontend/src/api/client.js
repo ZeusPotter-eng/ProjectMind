@@ -93,3 +93,13 @@ export const updateProject = (getAccessToken, id, data) =>
   projectsRequest(`/projects/${encodeURIComponent(id)}`, getAccessToken, { method: 'PATCH', body: JSON.stringify(data) })
 export const archiveProject = (getAccessToken, id) =>
   projectsRequest(`/projects/${encodeURIComponent(id)}/archive`, getAccessToken, { method: 'PATCH' })
+
+// PM-15: integrantes; usa exactamente la sesión de PM-12 y los permisos RLS.
+export const listProjectMembers = (getAccessToken, projectId) =>
+  projectsRequest(`/projects/${encodeURIComponent(projectId)}/members`, getAccessToken)
+export const addProjectMember = (getAccessToken, projectId, data) =>
+  projectsRequest(`/projects/${encodeURIComponent(projectId)}/members`, getAccessToken,
+    { method: 'POST', body: JSON.stringify(data) })
+export const updateProjectMember = (getAccessToken, projectId, userId, data) =>
+  projectsRequest(`/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(userId)}`,
+    getAccessToken, { method: 'PATCH', body: JSON.stringify(data) })

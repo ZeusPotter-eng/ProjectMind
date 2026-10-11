@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { archiveProject, createProject, listProjects, updateProject } from '../api/client'
 import './projects.css'
+import ProjectMembersPanel from './ProjectMembersPanel'
 
 const STATUSES = {
   planning: 'Planeación',
@@ -82,6 +83,7 @@ export default function ProjectsPage({ getAccessToken, currentUserId }) {
   const [offset, setOffset] = useState(0)
   const [formMode, setFormMode] = useState(null)
   const [confirmArchive, setConfirmArchive] = useState(null)
+  const [membersProject, setMembersProject] = useState(null)
   const limit = 20
 
   const load = useCallback(async () => {
@@ -153,11 +155,20 @@ export default function ProjectsPage({ getAccessToken, currentUserId }) {
         <p className="pm-project-objective">{project.objective}</p>
         {project.description && <p className="pm-project-description">{project.description}</p>}
         <div className="pm-project-meta"><span>Inicio: <b>{formatDate(project.start_date)}</b></span><span>Término: <b>{formatDate(project.due_date)}</b></span></div>
-        <div className="pm-project-card-actions">{project.owner_id === currentUserId ? <><button type="button" className="pm-project-secondary" onClick={() => setFormMode(project)}>Editar</button>{project.status !== 'archived' && <button type="button" className="pm-project-danger-link" onClick={() => setConfirmArchive(project)}>Archivar</button>}</> : <span className="pm-project-readonly">Proyecto compartido · solo consulta</span>}</div>
+        <div className="pm-project-card-actions"><button type="button" className="pm-project-secondary" onClick={() => setMembersProject(project)}>Integrantes</button>{project.owner_id === currentUserId ? <><button type="button" className="pm-project-secondary" onClick={() => setFormMode(project)}>Editar</button>{project.status !== 'archived' && <button type="button" className="pm-project-danger-link" onClick={() => setConfirmArchive(project)}>Archivar</button>}</> : <span className="pm-project-readonly">Proyecto compartido · revisa tus permisos en Integrantes</span>}</div>
       </article>)}</div>}
       <div className="pm-project-pagination"><small>{count ? `${offset + 1}–${Math.min(offset + projects.length, count)} de ${count}` : '0 proyectos'} · Buscar y filtrar actúa sobre la página actual</small><div><button type="button" className="pm-project-secondary" disabled={loading || offset === 0} onClick={() => setOffset(Math.max(0, offset - limit))}>Anterior</button><button type="button" className="pm-project-secondary" disabled={loading || offset + limit >= count} onClick={() => setOffset(offset + limit)}>Siguiente</button></div></div>
     </section>
 
+    {membersProject && <div className="pm-project-modal" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setMembersProject(null) }}>
+      <div className="pm-project-modal-dialog" role="dialog" aria-modal="true" aria-label={`Integrantes de ${membersProject.name}`}>
+        <ProjectMembersPanel project={membersProject} currentUserId={currentUserId} getAccessToken={getAccessToken}
+          onClose={() => setMembersProject(null)} onMembershipChanged={load}
+          onEditProject={() => { setFormMode(membersProject); setMembersProject(null) }}
+          onArchiveProject={() => { setConfirmArchive(membersProject); setMembersProject(null) }}/>
+
+      </div>
+    </div>}
     {formMode && <div className="pm-project-modal" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setFormMode(null) }}><div className="pm-project-modal-dialog" role="dialog" aria-modal="true" aria-label={formMode === 'new' ? 'Crear proyecto' : 'Editar proyecto'}><ProjectForm key={formMode === 'new' ? 'new' : formMode.id} project={formMode === 'new' ? null : formMode} saving={saving} onSave={save} onCancel={() => !saving && setFormMode(null)}/></div></div>}
     {confirmArchive && <div className="pm-project-modal"><div className="pm-project-confirm" role="alertdialog" aria-modal="true" aria-label="Confirmar archivo"><span className="eyebrow">CONFIRMAR ACCIÓN</span><h2>¿Archivar proyecto?</h2><p>“{confirmArchive.name}” dejará de aparecer en la lista normal, pero conservará su información.</p><div className="pm-project-form-actions"><button type="button" className="pm-project-secondary" onClick={() => setConfirmArchive(null)} disabled={saving}>Cancelar</button><button type="button" className="pm-project-primary" onClick={archive} disabled={saving}>{saving ? 'Archivando…' : 'Sí, archivar'}</button></div></div></div>}
   </div>

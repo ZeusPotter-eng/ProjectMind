@@ -11,6 +11,7 @@ from app.api.routes import (
     documents,
     health,
     meetings,
+    members,
     projects,
     reports,
     requirements,
@@ -23,7 +24,7 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.4.0",
+    version="0.5.0",
     description="API base del MVP de ProjectMind con consola CRUD de desarrollo.",
 )
 
@@ -39,6 +40,7 @@ for router in [
     health.router,
     auth.router,
     projects.router,
+    members.router,
     tasks.router,
     requirements.router,
     dependencies.router,
@@ -59,6 +61,6 @@ async def root():
     return {
         "name": settings.app_name,
         "environment": settings.app_env,
-        "version": "0.4.0",
+        "version": "0.5.0",
         "docs": "/docs",
     }
