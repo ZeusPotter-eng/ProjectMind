@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { addProjectMember, listProjectMembers, updateProjectMember } from '../api/client'
+import AvatarImage from './AvatarImage'
 import './members.css'
 
 const ROLES = { owner: 'Propietario', admin: 'Administrador', member: 'Integrante' }
 const STATES = { active: 'Activo', inactive: 'Inactivo', removed: 'Retirado' }
-const THEMES = ['violet', 'ocean', 'emerald', 'sunset', 'rose', 'slate']
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default function ProjectMembersPanel({ project, currentUserId, getAccessToken, onClose, onMembershipChanged, onEditProject, onArchiveProject }) {
@@ -83,7 +83,7 @@ export default function ProjectMembersPanel({ project, currentUserId, getAccessT
       {members.some(member => member.status === 'removed') && <label className="pm-members-removed-toggle"><input type="checkbox" checked={showRemoved} onChange={event => setShowRemoved(event.target.checked)}/> Mostrar integrantes retirados</label>}
       <div className="pm-members-roster">
         {visibleMembers.map(member => <article key={member.user_id} className="pm-members-person">
-          <div className={`pm-members-avatar theme-${THEMES.includes(member.avatar_path) ? member.avatar_path : 'violet'}`} aria-hidden="true">{(member.full_name || member.user_id).slice(0, 2).toUpperCase()}</div>
+          <AvatarImage className="pm-members-avatar" userId={member.user_id} name={member.full_name || member.user_id} avatarPath={member.avatar_path} getAccessToken={getAccessToken} />
           <div className="pm-members-person-info">
             <strong>{member.full_name || 'Cuenta de ProjectMind'}{member.user_id === currentUserId ? ' · Tú' : ''}</strong>
             <span className="pm-members-role-line">{ROLES[member.role]} · {STATES[member.status]}</span>

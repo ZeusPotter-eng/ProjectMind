@@ -6,3 +6,8 @@
 .auth-session-clock.expiring{color:#fecaca;background:rgba(220,38,38,.13);border-color:rgba(248,113,113,.4)}
 .auth-idle-warning{position:fixed;z-index:101;right:14px;bottom:80px;max-width:min(430px,calc(100vw - 28px));padding:13px 17px;background:#402024;border:1px solid #a34b59;color:#ffe3e3;border-radius:12px;font-size:12px;box-shadow:0 12px 35px #0008}
 @media(max-width:700px){.auth-identity{left:8px;right:8px;bottom:7px;max-width:none;justify-content:space-between;gap:5px}.auth-identity-email{display:none}.auth-session-clock{font-size:10px;padding:6px}.auth-identity button{font-size:10px;padding:7px 5px}.auth-idle-warning{bottom:68px}}
+/* PM-16: sin reloj flotante ni advertencias mientras la sesión está vigente. */
+.auth-session-clock,.auth-idle-warning{display:none!important}
+.auth-expired-message{padding:14px 16px;margin:20px 0 0;border:1px solid #7357bb;border-radius:12px;background:#221d41;color:#eee4ff;font-size:13px;line-height:1.6;font-weight:650}
+
+.auth-identity-avatar{width:31px;height:31px;flex:0 0 31px;border-radius:9px;display:grid;place-items:center;overflow:hidden;font-weight:800;color:white}.auth-identity-avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit}

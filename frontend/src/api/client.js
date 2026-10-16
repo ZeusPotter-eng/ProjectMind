@@ -108,3 +108,21 @@ export const updateProjectMember = (getAccessToken, projectId, userId, data) =>
 export const getMyProfile = (getAccessToken) => projectsRequest('/profile/me', getAccessToken)
 export const updateMyProfile = (getAccessToken, data) =>
   projectsRequest('/profile/me', getAccessToken, { method: 'PATCH', body: JSON.stringify(data) })
+
+// PM-16: fotografías en el bucket privado avatars. Subida multipart bajo JWT del usuario.
+export async function uploadMyAvatar(getAccessToken, file) {
+  const token = await getAccessToken()
+  const body = new FormData()
+  body.append('file', file)
+  const response = await fetch(`${API_URL}/profile/me/avatar`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body, // No definir Content-Type: el navegador añade el boundary multipart.
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(data.detail || `No fue posible subir la foto (${response.status}).`)
+  return data
+}
+
+export const getProfileAvatarUrl = (getAccessToken, userId) =>
+  projectsRequest(`/profile/avatar/${encodeURIComponent(userId)}`, getAccessToken)

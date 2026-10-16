@@ -25,3 +25,6 @@
 .pm-members-removed-toggle input{accent-color:#8b5cf6}
 .pm-members-footer{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:20px}
 @media(max-width:640px){.pm-members-panel{padding:17px}.pm-members-person{flex-wrap:wrap}.pm-members-person-actions{width:100%;flex-direction:row}.pm-members-person-actions select{flex:1}.pm-members-summary{grid-template-columns:1fr 1fr}.pm-members-fixed-role{margin-left:auto}}
+/* Fotografías privadas firmadas en Supabase Storage */
+.pm-members-avatar.has-photo{padding:0;overflow:hidden;background:#101c30!important}
+.pm-members-avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}

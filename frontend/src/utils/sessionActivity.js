@@ -1,39 +1,30 @@
-// Registro LOCAL por navegador. Nunca guarda tokens ni contraseñas.
-export const IDLE_TIMEOUT_MS = 30 * 60 * 1000
-const PREFIX = 'projectmind-activity-v1:'
+// Duración ABSOLUTA de una sesión: 24 horas desde el inicio, sin contador visible.
+// Historial local por usuario y navegador: NO contiene credenciales ni tokens.
+export const SESSION_DURATION_MS = 24 * 60 * 60 * 1000
+const PREFIX = 'projectmind-activity-v2:'
 const HISTORY_PREFIX = 'projectmind-session-history-v1:'
 
 const readJSON = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback }
 }
 
-export const activityKey = (userId) => `${PREFIX}${userId}`
-export const historyKey = (userId) => `${HISTORY_PREFIX}${userId}`
+export const activityKey = userId => `${PREFIX}${userId}`
+export const historyKey = userId => `${HISTORY_PREFIX}${userId}`
+
+export function isSessionExpired(startedAt, now = Date.now()) {
+  return !Number.isFinite(startedAt) || startedAt <= 0 || startedAt > now || now - startedAt >= SESSION_DURATION_MS
+}
 
 export function getActivity(userId, now = Date.now()) {
-  const activity = readJSON(activityKey(userId), null)
-  if (!Number.isFinite(activity?.lastActivityAt) || activity.lastActivityAt <= 0 || activity.lastActivityAt > now + 60_000) return null
-  return {
-    startedAt: Number.isFinite(activity.startedAt) && activity.startedAt > 0 && activity.startedAt <= now ? activity.startedAt : activity.lastActivityAt,
-    lastActivityAt: activity.lastActivityAt,
-  }
+  const data = readJSON(activityKey(userId), null)
+  if (!Number.isFinite(data?.startedAt) || data.startedAt <= 0 || data.startedAt > now) return null
+  return { startedAt: data.startedAt }
 }
 
 export function startActivity(userId, now = Date.now()) {
-  const activity = { startedAt: now, lastActivityAt: now }
+  const activity = { startedAt: now }
   localStorage.setItem(activityKey(userId), JSON.stringify(activity))
   return activity
-}
-
-export function touchActivity(userId, now = Date.now()) {
-  const current = getActivity(userId, now)
-  if (!current) return startActivity(userId, now)
-  // No reactivar silenciosamente una sesión que ya caducó.
-  if (now - current.lastActivityAt >= IDLE_TIMEOUT_MS) return current
-  if (now - current.lastActivityAt < 15_000) return current
-  const updated = { ...current, lastActivityAt: now }
-  localStorage.setItem(activityKey(userId), JSON.stringify(updated))
-  return updated
 }
 
 export function readHistory(userId) {
@@ -45,7 +36,8 @@ export function finishActivity(userId, reason, now = Date.now()) {
   const current = getActivity(userId, now)
   localStorage.removeItem(activityKey(userId))
   if (!current) return
-  const endedAt = reason === 'idle' ? Math.min(now, current.lastActivityAt) : now
+  // Si la pestaña permaneció cerrada, no registrar más de las 24 horas concedidas.
+  const endedAt = Math.min(now, current.startedAt + SESSION_DURATION_MS)
   const seconds = Math.max(0, Math.round((endedAt - current.startedAt) / 1000))
   const history = [...readHistory(userId), { endedAt: now, seconds, reason }].slice(-20)
   localStorage.setItem(historyKey(userId), JSON.stringify(history))
@@ -54,12 +46,13 @@ export function finishActivity(userId, reason, now = Date.now()) {
 export function sessionSummary(userId, now = Date.now()) {
   const history = readHistory(userId)
   const activity = getActivity(userId, now)
-  const meanSeconds = history.length ? Math.round(history.reduce((sum, record) => sum + record.seconds, 0) / history.length) : null
+  const meanSeconds = history.length ? Math.round(history.reduce((sum, value) => sum + value.seconds, 0) / history.length) : null
   return {
     completedSessions: history.length,
     averageSeconds: meanSeconds,
-    elapsedSeconds: activity ? Math.max(0, Math.floor((now - activity.startedAt) / 1000)) : 0,
-    remainingSeconds: activity ? Math.max(0, Math.ceil((IDLE_TIMEOUT_MS - (now - activity.lastActivityAt)) / 1000)) : 0,
+    sessionStartedAt: activity?.startedAt ?? null,
+    // Solo se usa internamente para cerrar, nunca se presenta como contador.
+    expired: !activity || isSessionExpired(activity.startedAt, now),
   }
 }
 
