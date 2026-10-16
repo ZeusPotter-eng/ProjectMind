@@ -336,3 +336,8 @@
 .pm-project-header-buttons{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 @media(max-width:600px){.pm-project-header-buttons{width:100%}.pm-project-header-buttons button{flex:1}}
 .pm-settings-link{border:0;background:none;color:#c4b5fd;text-decoration:underline;cursor:pointer;font-weight:700;font-size:11px}
+
+/* PM-16: Fotografía real en el acceso rápido al perfil (barra superior). */
+.user-avatar { padding: 0; overflow: hidden; cursor: pointer; }
+.user-avatar > .pm-topbar-avatar { width: 100%; height: 100%; border-radius: inherit; overflow: hidden; display: grid; place-items: center; }
+.user-avatar > .pm-topbar-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }

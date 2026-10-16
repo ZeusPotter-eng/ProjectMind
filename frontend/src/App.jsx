@@ -4,6 +4,7 @@ import CrudConsole from './components/CrudConsole'
 import ProjectsPage from './components/ProjectsPage'
 import TimelinePage from './components/TimelinePage'
 import ProfilePage from './components/ProfilePage'
+import AvatarImage from './components/AvatarImage'
 
 const TEAM_MEMBERS = [
   { id: 'jimmy', name: 'Jimmy', role: 'Desarrollador de ProjectMind', initials: 'JI' },
@@ -167,7 +168,7 @@ function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
   }
 
   function SettingsPage() {
-    return <section className="content-card settings-page"><span className="eyebrow">SISTEMA</span><h1>Configuración</h1><p>Estado de las integraciones principales contempladas para ProjectMind.</p><div className="settings-grid"><article><span>01</span><h3>Supabase / PostgreSQL</h3><p>{supabaseStatus.loading ? 'Verificando conexión...' : supabaseStatus.message}</p></article><article><span>02</span><h3>OpenAI / LM Studio</h3><p>Proveedor actual: <strong>{assistantStatus.provider || 'No disponible'}</strong></p></article><article><span>03</span><h3>Human-in-the-Loop</h3><p>{assistantStatus.humanInTheLoop ? 'Revisión humana habilitada.' : 'Revisión pendiente.'}</p></article><article><span>04</span><h3>RAG</h3><p>Recuperación de información desde documentos y contexto del proyecto.</p></article><article><span>05</span><h3>Sesión de usuario</h3><p>Cierre local después de 30 minutos de inactividad. <button type="button" className="pm-settings-link" onClick={() => navigate('Mi perfil')}>Consultar actividad y promedio →</button></p></article></div></section>
+    return <section className="content-card settings-page"><span className="eyebrow">SISTEMA</span><h1>Configuración</h1><p>Estado de las integraciones principales contempladas para ProjectMind.</p><div className="settings-grid"><article><span>01</span><h3>Supabase / PostgreSQL</h3><p>{supabaseStatus.loading ? 'Verificando conexión...' : supabaseStatus.message}</p></article><article><span>02</span><h3>OpenAI / LM Studio</h3><p>Proveedor actual: <strong>{assistantStatus.provider || 'No disponible'}</strong></p></article><article><span>03</span><h3>Human-in-the-Loop</h3><p>{assistantStatus.humanInTheLoop ? 'Revisión humana habilitada.' : 'Revisión pendiente.'}</p></article><article><span>04</span><h3>RAG</h3><p>Recuperación de información desde documentos y contexto del proyecto.</p></article><article><span>05</span><h3>Sesión de usuario</h3><p>Sesión activa hasta 24 horas desde el último inicio de sesión, sin contador visible. <button type="button" className="pm-settings-link" onClick={() => navigate('Mi perfil')}>Consultar actividad y promedio →</button></p></article></div></section>
   }
 
   return <div className="app-shell">
@@ -178,7 +179,7 @@ function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
     </aside>
     {mobileMenuOpen && <button className="sidebar-overlay" aria-label="Cerrar menú" onClick={()=>setMobileMenuOpen(false)}/>} 
     <div className="main-shell">
-      <header className="topbar"><button className="menu-button" onClick={()=>setMobileMenuOpen(true)}>◆</button><div><small>ProjectMind /</small><strong>{activeModule}</strong></div><div className="topbar-actions"><span className={backendClass}><span className="status-dot"/>{backendStatus.connected?'Online':'Offline'}</span><button type="button" className={`user-avatar theme-${currentUser?.profile_avatar || 'violet'}`} title="Abrir mi perfil" aria-label="Abrir mi perfil" onClick={() => navigate('Mi perfil')}>{(currentUser?.profile_name || currentUser?.email || 'PM').slice(0, 2).toUpperCase()}</button></div></header>
+      <header className="topbar"><button className="menu-button" onClick={()=>setMobileMenuOpen(true)}>◆</button><div><small>ProjectMind /</small><strong>{activeModule}</strong></div><div className="topbar-actions"><span className={backendClass}><span className="status-dot"/>{backendStatus.connected?'Online':'Offline'}</span><button type="button" className="user-avatar" title="Abrir mi perfil" aria-label="Abrir mi perfil" onClick={() => navigate('Mi perfil')}><AvatarImage className="pm-topbar-avatar" userId={currentUser?.id} name={currentUser?.profile_name || currentUser?.email} avatarPath={currentUser?.profile_avatar} getAccessToken={getAccessToken} /></button></div></header>
       <main className="workspace">{activeModule==='Dashboard' ? <Dashboard/> : activeModule==='Configuración' ? <SettingsPage/> : activeModule==='Consola CRUD' ? <CrudPage/> : activeModule==='Proyectos' ? <ProjectsPage getAccessToken={getAccessToken} currentUserId={currentUser?.id} onShowTimeline={() => navigate('Cronograma')}/> : activeModule === 'Cronograma' ? <TimelinePage getAccessToken={getAccessToken} onOpenProjects={() => navigate('Proyectos')}/> : activeModule === 'Mi perfil' ? <ProfilePage getAccessToken={getAccessToken} currentUser={currentUser} onProfileUpdated={onProfileUpdated} sessionInfo={sessionInfo} onShowProjects={() => navigate('Proyectos')}/> : <ModulePage/>}</main>
     </div>
   </div>
