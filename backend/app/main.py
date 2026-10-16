@@ -43,6 +43,7 @@ for router in [
     projects.router,
     profile.router,
     members.router,
+    tasks.status_router,
     tasks.router,
     requirements.router,
     dependencies.router,

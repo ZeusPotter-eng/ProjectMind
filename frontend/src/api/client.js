@@ -126,3 +126,21 @@ export async function uploadMyAvatar(getAccessToken, file) {
 
 export const getProfileAvatarUrl = (getAccessToken, userId) =>
   projectsRequest(`/profile/avatar/${encodeURIComponent(userId)}`, getAccessToken)
+
+// PM-16: tareas, avance y responsables. Todas las operaciones usan JWT y RLS.
+const taskBase = (projectId) => `/projects/${encodeURIComponent(projectId)}/tasks`
+export const listTasks = (getAccessToken, projectId, { limit = 100, offset = 0 } = {}) =>
+  projectsRequest(`${taskBase(projectId)}?limit=${limit}&offset=${offset}`, getAccessToken)
+export const createTask = (getAccessToken, projectId, data) =>
+  projectsRequest(taskBase(projectId), getAccessToken, { method: 'POST', body: JSON.stringify(data) })
+export const updateTask = (getAccessToken, projectId, taskId, data) =>
+  projectsRequest(`${taskBase(projectId)}/${encodeURIComponent(taskId)}`, getAccessToken,
+    { method: 'PATCH', body: JSON.stringify(data) })
+export const deleteTask = (getAccessToken, projectId, taskId) =>
+  projectsRequest(`${taskBase(projectId)}/${encodeURIComponent(taskId)}`, getAccessToken, { method: 'DELETE' })
+export const assignTask = (getAccessToken, projectId, taskId, userId) =>
+  projectsRequest(`${taskBase(projectId)}/${encodeURIComponent(taskId)}/assignees/${encodeURIComponent(userId)}`,
+    getAccessToken, { method: 'POST' })
+export const unassignTask = (getAccessToken, projectId, taskId, userId) =>
+  projectsRequest(`${taskBase(projectId)}/${encodeURIComponent(taskId)}/assignees/${encodeURIComponent(userId)}`,
+    getAccessToken, { method: 'DELETE' })
