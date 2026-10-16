@@ -70,7 +70,7 @@ function ProjectForm({ project, saving, onSave, onCancel }) {
   </section>
 }
 
-export default function ProjectsPage({ getAccessToken, currentUserId }) {
+export default function ProjectsPage({ getAccessToken, currentUserId, onShowTimeline }) {
   const [projects, setProjects] = useState([])
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -130,7 +130,7 @@ export default function ProjectsPage({ getAccessToken, currentUserId }) {
   return <div className="pm-project-page">
     <header className="pm-project-header">
       <div><span className="eyebrow">PROJECTMIND · PM-13</span><h1>Mis proyectos</h1><p>Crea, organiza y da seguimiento a tus proyectos desde un solo lugar.</p></div>
-      <button type="button" className="pm-project-primary" onClick={() => { setFormMode('new'); setError(''); setNotice('') }}>+ Nuevo proyecto</button>
+      <div className="pm-project-header-buttons"><button type="button" className="pm-project-secondary" onClick={onShowTimeline}>▥ Ver cronograma</button><button type="button" className="pm-project-primary" onClick={() => { setFormMode('new'); setError(''); setNotice('') }}>+ Nuevo proyecto</button></div>
     </header>
 
     <div className="pm-project-overview">

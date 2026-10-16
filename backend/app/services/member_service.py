@@ -27,7 +27,7 @@ async def member_database_request(
         raise HTTPException(503, "La conexión con Supabase no está configurada.")
 
     query: dict[str, str] = {
-        "select": "project_id,user_id,role,status,joined_at,profiles(full_name)" if select_profiles else "project_id,user_id,role,status,joined_at",
+        "select": "project_id,user_id,role,status,joined_at,profiles(full_name,job_title,avatar_path)" if select_profiles else "project_id,user_id,role,status,joined_at",
     }
     if method != "POST":
         query["project_id"] = f"eq.{project_id}"
@@ -82,4 +82,6 @@ def serialize_member(row: dict[str, Any]) -> dict[str, Any]:
         "role": row["role"], "status": row["status"],
         "joined_at": row["joined_at"],
         "full_name": profile.get("full_name") if isinstance(profile, dict) else None,
+        "job_title": profile.get("job_title") if isinstance(profile, dict) else None,
+        "avatar_path": profile.get("avatar_path") if isinstance(profile, dict) else None,
     }

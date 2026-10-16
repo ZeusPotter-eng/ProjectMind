@@ -331,3 +331,8 @@
 .crud-page .crud-console .eyebrow{color:#6d28d9}
 .crud-page .crud-console{padding:24px;border-radius:16px;background:#fff}
 @media(max-width:600px){.crud-page .crud-console{padding:12px}}
+/* Navegación a perfiles y cronograma, conservando el diseño existente. */
+.user-avatar{cursor:pointer}.user-avatar:hover{border-color:#8b5cf6;background:#221b3b;color:#e9d5ff}
+.pm-project-header-buttons{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:600px){.pm-project-header-buttons{width:100%}.pm-project-header-buttons button{flex:1}}
+.pm-settings-link{border:0;background:none;color:#c4b5fd;text-decoration:underline;cursor:pointer;font-weight:700;font-size:11px}

@@ -49,6 +49,8 @@ class MemberOut(BaseModel):
     status: MemberStatus
     joined_at: datetime
     full_name: str | None = None
+    job_title: str | None = None
+    avatar_path: str | None = None
 
 
 class MemberList(BaseModel):

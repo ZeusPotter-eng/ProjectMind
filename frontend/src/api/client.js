@@ -103,3 +103,8 @@ export const addProjectMember = (getAccessToken, projectId, data) =>
 export const updateProjectMember = (getAccessToken, projectId, userId, data) =>
   projectsRequest(`/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(userId)}`,
     getAccessToken, { method: 'PATCH', body: JSON.stringify(data) })
+
+// Perfil propio: RLS de profiles y JWT de PM-12, sin credenciales administrativas.
+export const getMyProfile = (getAccessToken) => projectsRequest('/profile/me', getAccessToken)
+export const updateMyProfile = (getAccessToken, data) =>
+  projectsRequest('/profile/me', getAccessToken, { method: 'PATCH', body: JSON.stringify(data) })

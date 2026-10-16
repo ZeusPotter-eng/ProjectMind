@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { getHealth, getSupabaseHealth, getAssistantStatus } from './api/client'
 import CrudConsole from './components/CrudConsole'
 import ProjectsPage from './components/ProjectsPage'
+import TimelinePage from './components/TimelinePage'
+import ProfilePage from './components/ProfilePage'
 
 const TEAM_MEMBERS = [
   { id: 'jimmy', name: 'Jimmy', role: 'Desarrollador de ProjectMind', initials: 'JI' },
@@ -12,6 +14,7 @@ const TEAM_MEMBERS = [
 const MODULES = [
   ['Dashboard', 'Resumen de proyectos, pendientes, bloqueos y alertas.', '◆'],
   ['Proyectos', 'Creación, consulta, administración e integrantes.', '◆'],
+  ['Cronograma', 'Calendario y barras de duración de proyectos (Gantt).', '▥'],
   ['Tareas', 'Estados, responsables, fechas y seguimiento de avance.', '◆'],
   ['Requisitos', 'Registro, revisión y trazabilidad de requisitos.', '◆'],
   ['Dependencias', 'Relaciones entre tareas y análisis de afectaciones.', '◆'],
@@ -25,11 +28,12 @@ const MODULES = [
 ]
 
 const NAV_GROUPS = [
-  { label: 'Principal', items: ['Dashboard', 'Proyectos', 'Tareas', 'Requisitos'] },
+  { label: 'Principal', items: ['Dashboard', 'Proyectos', 'Cronograma', 'Tareas', 'Requisitos'] },
   { label: 'Gestión', items: ['Dependencias', 'Bloqueos', 'Documentos', 'Reuniones'] },
   { label: 'Inteligencia', items: ['Asistente IA', 'Propuestas IA'] },
   { label: 'Análisis', items: ['Reportes', 'Auditoría'] },
   { label: 'Administración', items: ['Consola CRUD'] },
+  { label: 'Cuenta', items: ['Mi perfil'] },
 ]
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024
@@ -38,7 +42,7 @@ function getStoredPhoto(memberId) {
   try { return localStorage.getItem(`projectmind-team-photo-${memberId}`) || '' } catch { return '' }
 }
 
-function App({ getAccessToken, currentUser }) {
+function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
   const [activeModule, setActiveModule] = useState('Dashboard')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [backendStatus, setBackendStatus] = useState({ loading: true, connected: false, message: 'Comprobando conexión con FastAPI...' })
@@ -47,7 +51,13 @@ function App({ getAccessToken, currentUser }) {
   const [memberPhotos, setMemberPhotos] = useState(() => TEAM_MEMBERS.reduce((photos, member) => ({ ...photos, [member.id]: getStoredPhoto(member.id) }), {}))
   const [photoMessages, setPhotoMessages] = useState({})
 
-  const moduleMap = useMemo(() => Object.fromEntries(MODULES.map((item) => [item[0], item])), [])
+  const moduleMap = useMemo(() => Object.fromEntries([...MODULES, ['Mi perfil', 'Tu identidad profesional y estadísticas de sesión.', '◉']].map((item) => [item[0], item])), [])
+
+  useEffect(() => {
+    const openProfile = () => navigate('Mi perfil')
+    window.addEventListener('projectmind:open-profile', openProfile)
+    return () => window.removeEventListener('projectmind:open-profile', openProfile)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -119,7 +129,7 @@ function App({ getAccessToken, currentUser }) {
       </section>
 
       <section className="stats-grid">
-        <article><span>12</span><p>Módulos definidos</p><small>Estructura del MVP</small></article>
+        <article><span>{MODULES.length}</span><p>Módulos definidos</p><small>Estructura del MVP</small></article>
         <article><span>3</span><p>Integrantes</p><small>Equipo ProjectMind</small></article>
         <article><span>{backendStatus.connected ? 'ON' : 'OFF'}</span><p>Backend</p><small>FastAPI</small></article>
         <article><span>{assistantStatus.configured ? 'ON' : '◆'}</span><p>Asistente IA</p><small>{assistantStatus.provider || 'Por configurar'}</small></article>
@@ -157,7 +167,7 @@ function App({ getAccessToken, currentUser }) {
   }
 
   function SettingsPage() {
-    return <section className="content-card settings-page"><span className="eyebrow">SISTEMA</span><h1>Configuración</h1><p>Estado de las integraciones principales contempladas para ProjectMind.</p><div className="settings-grid"><article><span>01</span><h3>Supabase / PostgreSQL</h3><p>{supabaseStatus.loading ? 'Verificando conexión...' : supabaseStatus.message}</p></article><article><span>02</span><h3>OpenAI / LM Studio</h3><p>Proveedor actual: <strong>{assistantStatus.provider || 'No disponible'}</strong></p></article><article><span>03</span><h3>Human-in-the-Loop</h3><p>{assistantStatus.humanInTheLoop ? 'Revisión humana habilitada.' : 'Revisión pendiente.'}</p></article><article><span>04</span><h3>RAG</h3><p>Recuperación de información desde documentos y contexto del proyecto.</p></article></div></section>
+    return <section className="content-card settings-page"><span className="eyebrow">SISTEMA</span><h1>Configuración</h1><p>Estado de las integraciones principales contempladas para ProjectMind.</p><div className="settings-grid"><article><span>01</span><h3>Supabase / PostgreSQL</h3><p>{supabaseStatus.loading ? 'Verificando conexión...' : supabaseStatus.message}</p></article><article><span>02</span><h3>OpenAI / LM Studio</h3><p>Proveedor actual: <strong>{assistantStatus.provider || 'No disponible'}</strong></p></article><article><span>03</span><h3>Human-in-the-Loop</h3><p>{assistantStatus.humanInTheLoop ? 'Revisión humana habilitada.' : 'Revisión pendiente.'}</p></article><article><span>04</span><h3>RAG</h3><p>Recuperación de información desde documentos y contexto del proyecto.</p></article><article><span>05</span><h3>Sesión de usuario</h3><p>Cierre local después de 30 minutos de inactividad. <button type="button" className="pm-settings-link" onClick={() => navigate('Mi perfil')}>Consultar actividad y promedio →</button></p></article></div></section>
   }
 
   return <div className="app-shell">
@@ -168,8 +178,8 @@ function App({ getAccessToken, currentUser }) {
     </aside>
     {mobileMenuOpen && <button className="sidebar-overlay" aria-label="Cerrar menú" onClick={()=>setMobileMenuOpen(false)}/>} 
     <div className="main-shell">
-      <header className="topbar"><button className="menu-button" onClick={()=>setMobileMenuOpen(true)}>◆</button><div><small>ProjectMind /</small><strong>{activeModule}</strong></div><div className="topbar-actions"><span className={backendClass}><span className="status-dot"/>{backendStatus.connected?'Online':'Offline'}</span><div className="user-avatar">PM</div></div></header>
-      <main className="workspace">{activeModule==='Dashboard' ? <Dashboard/> : activeModule==='Configuración' ? <SettingsPage/> : activeModule==='Consola CRUD' ? <CrudPage/> : activeModule==='Proyectos' ? <ProjectsPage getAccessToken={getAccessToken} currentUserId={currentUser?.id}/> : <ModulePage/>}</main>
+      <header className="topbar"><button className="menu-button" onClick={()=>setMobileMenuOpen(true)}>◆</button><div><small>ProjectMind /</small><strong>{activeModule}</strong></div><div className="topbar-actions"><span className={backendClass}><span className="status-dot"/>{backendStatus.connected?'Online':'Offline'}</span><button type="button" className={`user-avatar theme-${currentUser?.profile_avatar || 'violet'}`} title="Abrir mi perfil" aria-label="Abrir mi perfil" onClick={() => navigate('Mi perfil')}>{(currentUser?.profile_name || currentUser?.email || 'PM').slice(0, 2).toUpperCase()}</button></div></header>
+      <main className="workspace">{activeModule==='Dashboard' ? <Dashboard/> : activeModule==='Configuración' ? <SettingsPage/> : activeModule==='Consola CRUD' ? <CrudPage/> : activeModule==='Proyectos' ? <ProjectsPage getAccessToken={getAccessToken} currentUserId={currentUser?.id} onShowTimeline={() => navigate('Cronograma')}/> : activeModule === 'Cronograma' ? <TimelinePage getAccessToken={getAccessToken} onOpenProjects={() => navigate('Proyectos')}/> : activeModule === 'Mi perfil' ? <ProfilePage getAccessToken={getAccessToken} currentUser={currentUser} onProfileUpdated={onProfileUpdated} sessionInfo={sessionInfo} onShowProjects={() => navigate('Proyectos')}/> : <ModulePage/>}</main>
     </div>
   </div>
 }
