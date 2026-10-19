@@ -47,6 +47,7 @@ for router in [
     tasks.router,
     requirements.router,
     dependencies.router,
+    dependencies.project_router,
     blockers.router,
     documents.router,
     assistant.router,
