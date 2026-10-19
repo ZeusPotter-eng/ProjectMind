@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { assignTask, createTask, deleteTask, listProjectMembers, listProjects, listTasks, unassignTask, updateTask } from '../api/client'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { assignTask, createTask, deleteTask, listProjectMembers, listProjects, listTasks, unassignTask, updateTask, listDependencies, createDependency, updateDependency, deleteDependency } from '../api/client'
+import DependencyManager from './DependencyManager'
+import { dependencySummary } from '../utils/dependencies'
 import './tasks.css'
 
 const STATUSES = { backlog: 'Backlog', todo: 'Por hacer', in_progress: 'En progreso', blocked: 'Bloqueada', review: 'En revisión', done: 'Finalizada', cancelled: 'Cancelada' }
@@ -36,11 +38,25 @@ function TaskEditor({ task, busy, onCancel, onSave }) {
     </form></div></div>
 }
 
-export default function TasksPage({ getAccessToken }) {
+async function fetchAll(getPage, pageSize) {
+  const results = []
+  for (;;) {
+    const data = await getPage(pageSize, results.length)
+    results.push(...(data.items || []))
+    if (!data.items?.length || results.length >= data.count) return results
+  }
+}
+
+export default function TasksPage({ getAccessToken, focusDependencies = false }) {
   const [projects, setProjects] = useState([])
   const [projectId, setProjectId] = useState('')
   const [tasks, setTasks] = useState([])
   const [members, setMembers] = useState([])
+  const [allTasks, setAllTasks] = useState([])
+  const [dependencies, setDependencies] = useState([])
+  const [dependencyTask, setDependencyTask] = useState(null)
+  const [dependencyFilter, setDependencyFilter] = useState('all')
+  const loadSequence = useRef(0)
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -63,21 +79,47 @@ export default function TasksPage({ getAccessToken }) {
   }, [getAccessToken])
 
   const load = useCallback(async () => {
-    if (!projectId) { setTasks([]); setMembers([]); setTotal(0); return }
+    const currentLoad = ++loadSequence.current
+    if (!projectId) { setTasks([]); setMembers([]); setAllTasks([]); setDependencies([]); setTotal(0); setLoading(false); return }
     setLoading(true); setError('')
     try {
-      const [taskData, memberData] = await Promise.all([listTasks(getAccessToken, projectId, { limit, offset }), listProjectMembers(getAccessToken, projectId)])
+      const [taskData, memberData, catalog, edges] = await Promise.all([
+        listTasks(getAccessToken, projectId, { limit, offset }),
+        listProjectMembers(getAccessToken, projectId),
+        fetchAll((l, o) => listTasks(getAccessToken, projectId, { limit: l, offset: o }), 100),
+        fetchAll((l, o) => listDependencies(getAccessToken, projectId, { limit: l, offset: o }), 500),
+      ])
+      if (currentLoad !== loadSequence.current) return
       setTasks(taskData.items || []); setTotal(taskData.count || 0)
       setMembers((memberData.items || []).filter(m => m.status === 'active'))
-    } catch (e) { setError(e.message || 'No se pudieron cargar las tareas.') }
-    finally { setLoading(false) }
+      setAllTasks(catalog); setDependencies(edges)
+    } catch (e) { if (currentLoad === loadSequence.current) setError(e.message || 'No se pudieron cargar las tareas y dependencias.') }
+    finally { if (currentLoad === loadSequence.current) setLoading(false) }
   }, [getAccessToken, projectId, offset])
   useEffect(() => { load() }, [load])
   const project = projects.find(p => p.id === projectId)
   const readonly = project?.status === 'archived'
-  const visible = useMemo(() => tasks.filter(t => (status === 'all' || t.status === status) && (priority === 'all' || t.priority === priority) && `${t.title} ${t.description || ''}`.toLowerCase().includes(search.toLowerCase().trim())), [tasks, status, priority, search])
+  const taskMap = useMemo(() => new Map(allTasks.map(t => [t.id, t])), [allTasks])
+  const visible = useMemo(() => tasks.filter(t => {
+    const summary = dependencySummary(t.id, dependencies, taskMap)
+    const dependencyMatch = dependencyFilter === 'all' ||
+      (dependencyFilter === 'waiting' && summary.pending.length > 0) ||
+      (dependencyFilter === 'ready' && summary.hasDependencies && summary.ready) ||
+      (dependencyFilter === 'none' && !summary.hasDependencies)
+    return dependencyMatch && (status === 'all' || t.status === status) && (priority === 'all' || t.priority === priority) &&
+      `${t.title} ${t.description || ''}`.toLowerCase().includes(search.toLowerCase().trim())
+  }), [tasks, status, priority, search, dependencies, taskMap, dependencyFilter])
   const completion = tasks.length ? Math.round(tasks.reduce((n, t) => n + t.progress, 0) / tasks.length) : 0
   const doneCount = tasks.filter(t => t.status === 'done').length
+
+  async function applyDependency(action, successMessage) {
+    setBusy(true); setError(''); setNotice('')
+    try { await action(); setNotice(successMessage); await load() }
+    finally { setBusy(false) }
+  }
+  const addDependency = data => applyDependency(() => createDependency(getAccessToken, projectId, data), 'Dependencia creada.')
+  const editDependency = (id, data) => applyDependency(() => updateDependency(getAccessToken, projectId, id, data), 'Dependencia actualizada.')
+  const removeDependency = id => applyDependency(() => deleteDependency(getAccessToken, projectId, id), 'Dependencia eliminada.')
 
   async function save(data) {
     setBusy(true); setError(''); setNotice('')
@@ -108,22 +150,27 @@ export default function TasksPage({ getAccessToken }) {
   }
 
   return <div className="pm-tasks-page">
-    <header className="pm-task-heading"><div><span className="eyebrow">PROJECTMIND · PM-16</span><h1>Gestión de tareas</h1><p>Planifica, asigna responsables y supervisa el avance real de cada proyecto.</p></div>
+    <header className="pm-task-heading"><div><span className="eyebrow">PROJECTMIND · {focusDependencies ? 'PM-18' : 'PM-16 / PM-18'}</span><h1>{focusDependencies ? 'Dependencias entre tareas' : 'Gestión de tareas'}</h1><p>{focusDependencies ? 'Relaciona tareas predecesoras y sucesoras, e identifica qué trabajos siguen pendientes.' : 'Planifica, asigna responsables y supervisa el avance real de cada proyecto.'}</p></div>
       <button className="pm-task-primary" disabled={!projectId || readonly} onClick={() => setEditor(null)}>+ Nueva tarea</button></header>
-    <div className="pm-task-project"><label>Proyecto seleccionado<select value={projectId} onChange={e => { setProjectId(e.target.value); setOffset(0); setNotice('') }}>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>{readonly && <p>Este proyecto está archivado: las tareas solo pueden consultarse.</p>}</div>
+    <div className="pm-task-project"><label>Proyecto seleccionado<select value={projectId} onChange={e => { setProjectId(e.target.value); setOffset(0); setDependencyTask(null); setNotice('') }}>{projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>{readonly && <p>Este proyecto está archivado: las tareas solo pueden consultarse.</p>}</div>
     {error && <p role="alert" className="pm-task-error">{error}</p>}{notice && <p role="status" className="pm-task-notice">{notice}</p>}
     <div className="pm-task-stats"><article><span>Total de tareas</span><strong>{total}</strong></article><article><span>Completadas en esta página</span><strong>{doneCount}</strong></article><article><span>Avance medio en esta página</span><strong>{completion}%</strong></article></div>
-    <section className="pm-task-panel"><div className="pm-task-toolbar"><label>Buscar<input type="search" placeholder="Título o descripción" value={search} onChange={e => setSearch(e.target.value)} /></label><label>Estado<select value={status} onChange={e => setStatus(e.target.value)}><option value="all">Todos</option>{Object.entries(STATUSES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Prioridad<select value={priority} onChange={e => setPriority(e.target.value)}><option value="all">Todas</option>{Object.entries(PRIORITIES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><button className="pm-task-secondary" onClick={load} disabled={loading}>↻ Actualizar</button></div>
+    <section className="pm-task-panel"><div className="pm-task-toolbar"><label>Buscar<input type="search" placeholder="Título o descripción" value={search} onChange={e => setSearch(e.target.value)} /></label><label>Estado<select value={status} onChange={e => setStatus(e.target.value)}><option value="all">Todos</option>{Object.entries(STATUSES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Prioridad<select value={priority} onChange={e => setPriority(e.target.value)}><option value="all">Todas</option>{Object.entries(PRIORITIES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Dependencias<select value={dependencyFilter} onChange={e => setDependencyFilter(e.target.value)}><option value="all">Todas</option><option value="waiting">Con requisitos pendientes</option><option value="ready">Predecesoras completas</option><option value="none">Sin dependencias</option></select></label><button className="pm-task-secondary" onClick={load} disabled={loading}>↻ Actualizar</button></div>
       {loading ? <div className="pm-task-empty">Cargando tareas…</div> : !projectId ? <div className="pm-task-empty">Primero crea un proyecto en la sección Proyectos.</div> : !visible.length ? <div className="pm-task-empty">No hay tareas con esos filtros. Crea la primera tarea del proyecto.</div> : <div className="pm-task-grid">{visible.map(task => <article className="pm-task-card" key={task.id}>
         <div className="pm-task-card-head"><span className="pm-task-status" data-status={task.status}>{STATUSES[task.status]}</span><span className="pm-task-priority" data-priority={task.priority}>{PRIORITIES[task.priority]}</span></div>
         <h3>{task.title}</h3>{task.description && <p>{task.description}</p>}
         <div className="pm-task-dates"><span>Inicio: {displayDate(task.start_date)}</span><span>Entrega: {displayDate(task.due_date)}</span></div>
         <div className="pm-task-progress-head"><span>Avance</span><strong>{task.progress}%</strong></div><div className="pm-task-progress"><span style={{ width: `${task.progress}%` }}/></div>
+        <div className="pm-task-dependency"><div>{(() => {
+          const info = dependencySummary(task.id, dependencies, taskMap)
+          return <small className={info.pending.length ? 'pm-dep-waiting' : 'pm-dep-ready'}>{!info.hasDependencies ? 'Sin predecesoras' : info.pending.length ? `◷ Espera ${info.pending.length} tarea(s)` : '✓ Predecesoras finalizadas'} · {info.successors.length} sucesora(s)</small>
+        })()}</div><button type="button" className="pm-task-secondary" disabled={busy} onClick={() => setDependencyTask(task)}>Ver dependencias</button></div>
         <div className="pm-task-assign"><strong>Responsables</strong>{members.length ? <div className="pm-task-people">{members.map(member => <label key={member.user_id}><input type="checkbox" checked={task.assignees.includes(member.user_id)} disabled={readonly || busy} onChange={() => changeAssignee(task, member.user_id)} /><span>{member.full_name || `Integrante ${member.user_id.slice(0,8)}`}</span></label>)}</div> : <small>No hay integrantes activos disponibles.</small>}</div>
         <div className="pm-task-footer"><select aria-label={`Cambiar estado de ${task.title}`} value={task.status} disabled={readonly || busy} onChange={e => quickStatus(task, e.target.value)}>{Object.entries(STATUSES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select><button className="pm-task-secondary" disabled={readonly || busy} onClick={() => setEditor(task)}>Editar</button><button className="pm-task-delete" disabled={readonly || busy} onClick={() => remove(task)}>Eliminar</button></div>
       </article>)}</div>}
       <div className="pm-task-pages"><small>Mostrando {visible.length} de {total} tareas (filtros sobre la página actual)</small><div><button className="pm-task-secondary" disabled={offset === 0 || loading} onClick={() => setOffset(n => Math.max(n - limit, 0))}>Anterior</button><button className="pm-task-secondary" disabled={offset + limit >= total || loading} onClick={() => setOffset(n => n + limit)}>Siguiente</button></div></div>
     </section>
+    {dependencyTask && <DependencyManager key={dependencyTask.id} task={dependencyTask} allTasks={allTasks} dependencies={dependencies} busy={busy} readonly={readonly} onClose={() => setDependencyTask(null)} onAdd={addDependency} onUpdate={editDependency} onDelete={removeDependency} />}
     {editor !== undefined && <TaskEditor key={editor?.id || 'new'} task={editor} busy={busy} onSave={save} onCancel={() => setEditor(undefined)} />}
   </div>
 }

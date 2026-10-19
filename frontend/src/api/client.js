@@ -144,3 +144,15 @@ export const assignTask = (getAccessToken, projectId, taskId, userId) =>
 export const unassignTask = (getAccessToken, projectId, taskId, userId) =>
   projectsRequest(`${taskBase(projectId)}/${encodeURIComponent(taskId)}/assignees/${encodeURIComponent(userId)}`,
     getAccessToken, { method: 'DELETE' })
+
+// PM-18: precedencias entre tareas; mismas credenciales JWT y RLS por proyecto.
+const dependencyBase = (projectId) => `/projects/${encodeURIComponent(projectId)}/dependencies`
+export const listDependencies = (getAccessToken, projectId, { limit = 500, offset = 0 } = {}) =>
+  projectsRequest(`${dependencyBase(projectId)}?limit=${limit}&offset=${offset}`, getAccessToken)
+export const createDependency = (getAccessToken, projectId, data) =>
+  projectsRequest(dependencyBase(projectId), getAccessToken, { method: 'POST', body: JSON.stringify(data) })
+export const updateDependency = (getAccessToken, projectId, id, data) =>
+  projectsRequest(`${dependencyBase(projectId)}/${encodeURIComponent(id)}`, getAccessToken,
+    { method: 'PATCH', body: JSON.stringify(data) })
+export const deleteDependency = (getAccessToken, projectId, id) =>
+  projectsRequest(`${dependencyBase(projectId)}/${encodeURIComponent(id)}`, getAccessToken, { method: 'DELETE' })

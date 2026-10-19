@@ -44,7 +44,7 @@ async def _enrich(rows, session):
 @router.get('', response_model=TaskList)
 async def list_tasks(project_id: UUID, limit: int = Query(50, ge=1, le=100), offset: int = Query(0, ge=0), session: dict = Depends(get_authenticated_session)):
     await _project(project_id, session)
-    rows, count = await task_database_request('GET', token=session['token'], filters={'project_id': f'eq.{project_id}', 'order': 'created_at.desc', 'limit': limit, 'offset': offset}, count=True)
+    rows, count = await task_database_request('GET', token=session['token'], filters={'project_id': f'eq.{project_id}', 'order': 'created_at.desc,id.desc', 'limit': limit, 'offset': offset}, count=True)
     return {'items': await _enrich(rows, session), 'count': count, 'limit': limit, 'offset': offset}
 
 @router.post('', response_model=TaskOut, status_code=201)

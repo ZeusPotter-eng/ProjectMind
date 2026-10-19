@@ -29,11 +29,15 @@ async def task_database_request(method: str, *, token: str, table: str = 'tasks'
         except ValueError:
             error = {}
         code = error.get('code') if isinstance(error, dict) else None
-        log.warning('PM16 tasks %s: status=%s code=%s', table, response.status_code, code)
+        log.warning('PM tasks %s: status=%s code=%s', table, response.status_code, code)
         if response.status_code in (401, 403) or code == '42501':
             raise HTTPException(403, 'No tienes permisos para esta operación.')
         if code == '23505':
-            raise HTTPException(409, 'El responsable ya está asignado a esta tarea.')
+            raise HTTPException(409, 'Este registro ya existe.')
+        if code == 'PM18C':
+            raise HTTPException(409, 'Esta relación generaría una dependencia circular.')
+        if code == 'PM18P':
+            raise HTTPException(422, 'Las tareas deben pertenecer al mismo proyecto.')
         if code == '23503':
             raise HTTPException(422, 'La persona o tarea indicada no existe.')
         if code in ('23514', '22P02', 'P0001'):
