@@ -7,6 +7,7 @@ from app.api.routes.projects import get_authenticated_session, get_project
 from app.schemas.common import ModuleStatus
 from app.schemas.tasks import TaskCreate, TaskList, TaskOut, TaskUpdate
 from app.services.task_service import task_database_request
+from app.services.blocker_service import pending_gate, requires_gate, enforce_gate
 from app.services.member_service import member_database_request
 
 router = APIRouter(prefix='/projects/{project_id}/tasks', tags=['Tasks'])
@@ -79,6 +80,8 @@ async def update_task(project_id: UUID, task_id: UUID, data: TaskUpdate, session
             raise HTTPException(422, 'El avance 100% requiere estado Finalizada.')
         if current.get('status') == 'done':
             values['completed_at'] = None
+    if requires_gate(current, values):
+        enforce_gate(await pending_gate(project_id, task_id, session['token']))
     values['updated_by'] = session['user_id']
     rows, _ = await task_database_request('PATCH', token=session['token'], filters={'project_id': f'eq.{project_id}', 'id': f'eq.{task_id}'}, payload=values)
     if not rows:

@@ -25,7 +25,7 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.6.0",
+    version="0.7.0",
     description="API base del MVP de ProjectMind con consola CRUD de desarrollo.",
 )
 
@@ -49,6 +49,7 @@ for router in [
     dependencies.router,
     dependencies.project_router,
     blockers.router,
+    blockers.project_router,
     documents.router,
     assistant.router,
     meetings.router,
@@ -65,6 +66,6 @@ async def root():
     return {
         "name": settings.app_name,
         "environment": settings.app_env,
-        "version": "0.6.0",
+        "version": "0.7.0",
         "docs": "/docs",
     }

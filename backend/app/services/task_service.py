@@ -34,6 +34,10 @@ async def task_database_request(method: str, *, token: str, table: str = 'tasks'
             raise HTTPException(403, 'No tienes permisos para esta operación.')
         if code == '23505':
             raise HTTPException(409, 'Este registro ya existe.')
+        if code == 'PM19B':
+            raise HTTPException(409, 'No puedes avanzar: la tarea tiene predecesoras o impedimentos pendientes.')
+        if code == 'PM19P':
+            raise HTTPException(422, 'El impedimento y su tarea deben pertenecer al mismo proyecto.')
         if code == 'PM18C':
             raise HTTPException(409, 'Esta relación generaría una dependencia circular.')
         if code == 'PM18P':

@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.api.routes import projects, tasks
+from app.services import blocker_service
 from app.schemas.tasks import TaskCreate, TaskUpdate
 
 P = '10000000-0000-4000-8000-000000000001'
@@ -31,6 +32,8 @@ def api(monkeypatch):
         return [{'user_id': U, 'status': 'active'}, {'user_id': V, 'status': 'active'}]
     async def db(method, *, token, table='tasks', filters=None, payload=None, count=False, select='*'):
         assert token == 'safe-jwt'
+        if table in ('task_dependencies', 'blockers'):
+            return [], 0
         if table == 'task_assignees':
             if method == 'GET':
                 ids = (filters or {}).get('task_id', 'in.()')
@@ -58,6 +61,7 @@ def api(monkeypatch):
         raise AssertionError(method)
     monkeypatch.setattr(tasks, 'get_project', project)
     monkeypatch.setattr(tasks, 'task_database_request', db)
+    monkeypatch.setattr(blocker_service, 'task_database_request', db)
     monkeypatch.setattr(tasks, 'member_database_request', members)
     app = FastAPI()
     app.include_router(tasks.router, prefix='/api/v1')
