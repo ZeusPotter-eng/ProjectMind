@@ -1,0 +1,17 @@
+/* PM-19: estilo de bloqueos integrado al tema oscuro de ProjectMind. */
+.pm-block-toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.pm-block-toolbar label{display:grid;gap:7px;color:#94a3b8;font-size:12px;min-width:200px}
+.pm-block-toolbar select{background:#090f1c;color:#f1f5f9;border:1px solid #30415d;border-radius:10px;padding:10px 12px;font:inherit;min-height:41px}
+.pm-block-state{padding:7px 11px;border-radius:25px;font-size:11px;font-weight:700;color:#fbbf24;background:#51351c}
+.pm-block-state[data-status=resolved]{color:#6ee7b7;background:#064e3b}
+.pm-block-state[data-status=dismissed]{color:#cbd5e1;background:#334155}
+.pm-block-linked{color:#c4b5fd!important;padding:9px 0;border-top:1px solid #293a54}
+.pm-block-hint{color:#a4b5cc;font-size:12px;line-height:1.7}
+.pm-block-actions{border-top:1px solid #293a54;display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:14px}
+.pm-block-card{min-height:250px}
+.pm-block-flag{display:block;color:#fbbf24;margin:0 0 10px;font-size:12px;line-height:1.65}
+.pm-block-flag small{display:block;color:#e5af64;margin:3px 0}
+.pm-block-flag button{margin-top:8px}
+.pm-block-note{border:1px solid #a1620755;background:#78350f33;color:#fcd34d;border-radius:10px;padding:12px;font-size:12px;line-height:1.6}
+.pm-task-card[data-gated=true]{border-color:#8a583e}
+@media(max-width:650px){.pm-block-toolbar label{width:100%}.pm-block-actions button{flex:1}}

@@ -156,3 +156,16 @@ export const updateDependency = (getAccessToken, projectId, id, data) =>
     { method: 'PATCH', body: JSON.stringify(data) })
 export const deleteDependency = (getAccessToken, projectId, id) =>
   projectsRequest(`${dependencyBase(projectId)}/${encodeURIComponent(id)}`, getAccessToken, { method: 'DELETE' })
+
+// PM-19: impedimentos de proyecto/tarea, autenticados bajo Supabase RLS.
+const blockerBase = (projectId) => `/projects/${encodeURIComponent(projectId)}/blockers`
+export const listBlockers = (getAccessToken, projectId, { limit = 500, offset = 0 } = {}) =>
+  projectsRequest(`${blockerBase(projectId)}?limit=${limit}&offset=${offset}`, getAccessToken)
+export const createBlocker = (getAccessToken, projectId, data) =>
+  projectsRequest(blockerBase(projectId), getAccessToken, { method: 'POST', body: JSON.stringify(data) })
+export const updateBlocker = (getAccessToken, projectId, id, data) =>
+  projectsRequest(`${blockerBase(projectId)}/${encodeURIComponent(id)}`, getAccessToken,
+    { method: 'PATCH', body: JSON.stringify(data) })
+export const deleteBlocker = (getAccessToken, projectId, id) =>
+  projectsRequest(`${blockerBase(projectId)}/${encodeURIComponent(id)}`, getAccessToken,
+    { method: 'DELETE' })
