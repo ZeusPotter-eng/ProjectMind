@@ -181,3 +181,21 @@ export const getAIPolicy = (token,projectId) => projectsRequest(`${intelBase(pro
 export const updateAIPolicy = (token,projectId,data) => projectsRequest(`${intelBase(projectId)}/policy`,token,{method:'PUT',body:JSON.stringify(data)})
 
 export const listAIActivity = (token,projectId) => projectsRequest(`${intelBase(projectId)}/activity?limit=50`,token)
+
+// PM-21: contrato de análisis con hallazgos y referencias trazables.
+export const getStructuredAIReport = (getAccessToken, projectId, focus = '', useLLM = false) =>
+  projectsRequest(`${intelBase(projectId)}/report`, getAccessToken, { method: 'POST', body: JSON.stringify({ focus, use_llm: useLLM }) })
+
+const evidenceBase = (projectId, taskId) => `${taskBase(projectId)}/${encodeURIComponent(taskId)}/evidence`
+export const listTaskEvidence = (getAccessToken, projectId, taskId) =>
+  projectsRequest(evidenceBase(projectId,taskId), getAccessToken)
+export const requestEvidenceLink = (getAccessToken, projectId, taskId, evidenceId) =>
+  projectsRequest(`${evidenceBase(projectId,taskId)}/${encodeURIComponent(evidenceId)}/access`, getAccessToken, { method:'POST' })
+export async function uploadTaskEvidence(getAccessToken, projectId, taskId, file) {
+  const token = await getAccessToken()
+  const body = new FormData(); body.append('file', file)
+  const response = await fetch(`${API_URL}${evidenceBase(projectId,taskId)}`, {method:'POST',headers:{Authorization:`Bearer ${token}`},body})
+  const data = await response.json().catch(()=>({}))
+  if (!response.ok) throw new Error(data.detail || `No se pudo subir el archivo (${response.status}).`)
+  return data
+}
