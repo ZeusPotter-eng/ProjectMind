@@ -24,6 +24,7 @@ class BlockerCreate(BaseModel):
     description: str | None = Field(default=None, max_length=4000)
     task_id: UUID | None = None
     severity: BlockerSeverity = BlockerSeverity.medium
+    is_blocking: bool = False
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
 
 
@@ -32,6 +33,7 @@ class BlockerUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=4000)
     task_id: UUID | None = None
     severity: BlockerSeverity | None = None
+    is_blocking: bool | None = None
     status: BlockerStatus | None = None
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
 
@@ -53,6 +55,7 @@ class BlockerOut(BaseModel):
     title: str
     description: str | None = None
     severity: BlockerSeverity
+    is_blocking: bool
     status: BlockerStatus
     created_by: UUID
     resolved_by: UUID | None = None

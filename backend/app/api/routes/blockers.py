@@ -18,6 +18,10 @@ async def module_status() -> ModuleStatus:
     return ModuleStatus(module='blockers', message='PM-19: registro, seguimiento y resolución de impedimentos activos.')
 
 
+async def _blocker_admin(project_id: UUID, session: dict):
+    from app.api.routes.dependencies import _admin
+    await _admin(project_id, session)
+
 async def _blocker(project_id: UUID, blocker_id: UUID, session: dict):
     rows, _ = await task_database_request('GET', token=session['token'], table='blockers',
         filters={'project_id': f'eq.{project_id}', 'id': f'eq.{blocker_id}', 'limit': 1})
@@ -42,6 +46,7 @@ async def create_blocker(project_id: UUID, data: BlockerCreate,
     await _project(project_id, session, writable=True)
     if data.task_id:
         await _task(project_id, data.task_id, session)
+    if data.is_blocking: await _blocker_admin(project_id, session)
     values = {**data.model_dump(mode='json'), 'project_id': str(project_id),
               'status': 'open', 'created_by': session['user_id']}
     rows, _ = await task_database_request('POST', token=session['token'], table='blockers', payload=values)
@@ -61,7 +66,8 @@ async def get_blocker(project_id: UUID, blocker_id: UUID,
 async def update_blocker(project_id: UUID, blocker_id: UUID, data: BlockerUpdate,
                          session: dict = Depends(get_authenticated_session)):
     await _project(project_id, session, writable=True)
-    await _blocker(project_id, blocker_id, session)
+    current = await _blocker(project_id, blocker_id, session)
+    if current.get('is_blocking',True) or data.is_blocking: await _blocker_admin(project_id, session)
     values = data.model_dump(mode='json', exclude_unset=True)
     if values.get('task_id'):
         await _task(project_id, UUID(str(values['task_id'])), session)
@@ -83,6 +89,7 @@ async def update_blocker(project_id: UUID, blocker_id: UUID, data: BlockerUpdate
 async def delete_blocker(project_id: UUID, blocker_id: UUID,
                          session: dict = Depends(get_authenticated_session)):
     await _project(project_id, session, writable=True)
+    await _blocker_admin(project_id, session)
     await _blocker(project_id, blocker_id, session)
     rows, _ = await task_database_request('DELETE', token=session['token'], table='blockers',
         filters={'project_id': f'eq.{project_id}', 'id': f'eq.{blocker_id}'})

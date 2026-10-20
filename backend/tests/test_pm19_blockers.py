@@ -84,6 +84,9 @@ def api(monkeypatch):
         raise AssertionError(method)
 
     monkeypatch.setattr(tasks, '_project', project)
+    async def admin(project_id,session):
+        return None  # test se ejecuta como administrador
+    monkeypatch.setattr(blockers,'_blocker_admin',admin)
     monkeypatch.setattr(blockers, '_project', project)
     monkeypatch.setattr(tasks, 'task_database_request', db)
     monkeypatch.setattr(blockers, 'task_database_request', db)
@@ -119,7 +122,7 @@ def test_blocker_crud_status_transitions_and_permissions(api):
     assert client.get('/api/v1/blockers/status').json()['module'] == 'blockers'
     assert client.post(base, json={'title': 'Mal proyecto', 'task_id': X}).status_code == 404
     assert client.post(base, json={'title': 'Omitido', 'status': 'resolved'}).status_code == 422
-    response = client.post(base, json={'title': 'Esperar credenciales', 'task_id': C, 'severity': 'critical'})
+    response = client.post(base, json={'title': 'Esperar credenciales', 'task_id': C, 'severity': 'critical', 'is_blocking': True})
     assert response.status_code == 201, response.text
     item = response.json(); ident = item['id']
     assert item['status'] == 'open' and item['created_by'] == U

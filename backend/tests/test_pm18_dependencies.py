@@ -38,7 +38,7 @@ def api(monkeypatch):
             raise HTTPException(404, 'Proyecto sin acceso')
         if writable and archived['value']:
             raise HTTPException(409, 'Proyecto archivado')
-        return {'id': P, 'status': 'archived' if archived['value'] else 'active'}
+        return {'id': P, 'status': 'archived' if archived['value'] else 'active', 'methodology': 'traditional'}
 
     async def db(method, *, token, table='tasks', filters=None, payload=None, count=False, select='*'):
         assert token == 'mock-session'
@@ -67,6 +67,9 @@ def api(monkeypatch):
             return [], 0
         raise AssertionError(method)
 
+    async def admin(project_id, session):
+        return None  # pruebas CRUD ejecutadas por administrador ficticio
+    monkeypatch.setattr(dependencies, '_admin', admin)
     monkeypatch.setattr(dependencies, '_project', project)
     monkeypatch.setattr(dependencies, 'task_database_request', db)
     monkeypatch.setattr(dependency_service, 'task_database_request', db)

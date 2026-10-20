@@ -35,7 +35,7 @@ async def task_database_request(method: str, *, token: str, table: str = 'tasks'
         if code == '23505':
             raise HTTPException(409, 'Este registro ya existe.')
         if code == 'PM19B':
-            raise HTTPException(409, 'No puedes avanzar: la tarea tiene predecesoras o impedimentos pendientes.')
+            raise HTTPException(409, error.get('message', 'La tarea tiene restricciones obligatorias pendientes.'))
         if code == 'PM19P':
             raise HTTPException(422, 'El impedimento y su tarea deben pertenecer al mismo proyecto.')
         if code == 'PM18C':

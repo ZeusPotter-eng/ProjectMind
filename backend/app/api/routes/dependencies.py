@@ -26,6 +26,12 @@ async def _edge(project_id: UUID, dependency_id: UUID, session: dict) -> dict:
     return rows[0]
 
 
+async def _admin(project_id: UUID, session: dict) -> None:
+    from app.services.member_service import member_database_request
+    members = await member_database_request('GET', access_token=session['token'], project_id=str(project_id), select_profiles=False)
+    if not any(str(m['user_id']) == str(session['user_id']) and m['status'] == 'active' and m['role'] in ('owner','admin') for m in members):
+        raise HTTPException(403, 'Solo administradores pueden modificar dependencias obligatorias.')
+
 async def _verify_tasks(project_id: UUID, task_id: UUID, predecessor_id: UUID, session: dict) -> None:
     if task_id == predecessor_id:
         raise HTTPException(422, 'Una tarea no puede depender de sí misma.')
@@ -52,7 +58,13 @@ async def create_dependency(project_id: UUID, data: DependencyCreate,
     await _verify_tasks(project_id, data.task_id, data.depends_on_task_id, session)
     existing = await all_project_dependencies(project_id, session['token'])
     validate_dependency_graph(existing, task_id=str(data.task_id), depends_on_task_id=str(data.depends_on_task_id))
-    values = {**data.model_dump(mode='json'), 'project_id': str(project_id), 'created_by': session['user_id']}
+    project = await _project(project_id, session)
+    values = data.model_dump(mode='json', exclude_none=True)
+    values['enforcement'] = values.get('enforcement', 'strict' if project.get('methodology') == 'traditional' else 'informational')
+    kind = values.get('dependency_type','finish_to_start')
+    values['gate_on'] = values.get('gate_on', 'finish' if kind in ('finish_to_finish','start_to_finish') else 'start')
+    if values['enforcement'] == 'strict': await _admin(project_id, session)
+    values.update({'project_id': str(project_id), 'created_by': session['user_id']})
     rows, _ = await task_database_request('POST', token=session['token'], table='task_dependencies', payload=values)
     if not rows:
         raise HTTPException(403, 'No se pudo crear la dependencia.')
@@ -69,6 +81,7 @@ async def get_dependency(project_id: UUID, dependency_id: UUID, session: dict = 
 async def update_dependency(project_id: UUID, dependency_id: UUID, data: DependencyUpdate,
                             session: dict = Depends(get_authenticated_session)):
     await _project(project_id, session, writable=True)
+    await _admin(project_id, session)
     current = await _edge(project_id, dependency_id, session)
     values = data.model_dump(mode='json', exclude_unset=True)
     predecessor = UUID(str(values.get('depends_on_task_id', current['depends_on_task_id'])))
@@ -87,6 +100,7 @@ async def update_dependency(project_id: UUID, dependency_id: UUID, data: Depende
 async def delete_dependency(project_id: UUID, dependency_id: UUID,
                             session: dict = Depends(get_authenticated_session)):
     await _project(project_id, session, writable=True)
+    await _admin(project_id, session)
     await _edge(project_id, dependency_id, session)
     rows, _ = await task_database_request('DELETE', token=session['token'], table='task_dependencies',
         filters={'project_id': f'eq.{project_id}', 'id': f'eq.{dependency_id}'})

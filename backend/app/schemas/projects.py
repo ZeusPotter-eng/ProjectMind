@@ -6,6 +6,11 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class Methodology(str, Enum):
+    scrum = 'scrum'
+    traditional = 'traditional'
+    hybrid = 'hybrid'
+
 class ProjectStatus(str, Enum):
     planning = "planning"
     active = "active"
@@ -20,6 +25,7 @@ class ProjectFields(BaseModel):
     description: str | None = Field(default=None, max_length=5000)
     start_date: date | None = None
     due_date: date | None = None
+    methodology: Methodology = Methodology.hybrid
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -41,6 +47,7 @@ class ProjectUpdate(BaseModel):
     status: ProjectStatus | None = None
     start_date: date | None = None
     due_date: date | None = None
+    methodology: Methodology | None = None
 
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -49,7 +56,7 @@ class ProjectUpdate(BaseModel):
         values = self.model_dump(exclude_unset=True)
         if not values:
             raise ValueError("Debes enviar al menos un campo para actualizar.")
-        for required in ("name", "objective", "status"):
+        for required in ("name", "objective", "status", "methodology"):
             if required in values and values[required] is None:
                 raise ValueError(f"{required} no puede estar vacío.")
         if self.start_date and self.due_date and self.due_date < self.start_date:

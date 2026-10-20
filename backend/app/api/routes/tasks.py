@@ -81,7 +81,7 @@ async def update_task(project_id: UUID, task_id: UUID, data: TaskUpdate, session
         if current.get('status') == 'done':
             values['completed_at'] = None
     if requires_gate(current, values):
-        enforce_gate(await pending_gate(project_id, task_id, session['token']))
+        enforce_gate(await pending_gate(project_id, task_id, session['token'], current, values))
     values['updated_by'] = session['user_id']
     rows, _ = await task_database_request('PATCH', token=session['token'], filters={'project_id': f'eq.{project_id}', 'id': f'eq.{task_id}'}, payload=values)
     if not rows:
