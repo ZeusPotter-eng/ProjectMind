@@ -38,8 +38,8 @@ test('bloqueo no se aplica a otras tareas ni por impedimentos generales', () => 
 })
 
 test('no bloquea edición de metadatos ni regreso a Por hacer', () => {
-  const gate = taskBlockReasons({ ...b, status: 'in_progress', progress: 30 }, [a, b], links, [])
+  const gate = taskBlockReasons({ ...b, status: 'in_progress', progress: 30 }, [a, b], links, [], { nextStatus: 'review', nextProgress: 30 })
   assert.equal(preventsTaskUpdate({ ...b, status: 'in_progress', progress: 30 }, 'in_progress', 30, gate), false)
   assert.equal(preventsTaskUpdate({ ...b, status: 'in_progress', progress: 30 }, 'todo', 10, gate), false)
-  assert.equal(preventsTaskUpdate({ ...b, status: 'in_progress', progress: 30 }, 'review', 30, gate), true)
+  assert.equal(preventsTaskUpdate({ ...b, status: 'in_progress', progress: 30 }, 'review', 30, gate), false) // PM-20: restricción solo de inicio ya cumplido
 })

@@ -12,13 +12,13 @@ const EMPTY = { title: '', description: '', status: 'todo', priority: 'medium', 
 const asForm = (t) => t ? { title: t.title, description: t.description || '', status: t.status, priority: t.priority, start_date: t.start_date || '', due_date: t.due_date || '', progress: t.progress } : { ...EMPTY }
 const displayDate = value => value ? value.split('-').reverse().join('/') : 'Sin fecha'
 
-function TaskEditor({ task, gate, busy, onCancel, onSave }) {
+function TaskEditor({ task, gate, gateForUpdate, busy, onCancel, onSave }) {
   const [form, setForm] = useState(() => asForm(task))
   const [error, setError] = useState('')
   const set = (key, value) => setForm(prev => ({ ...prev, [key]: value, ...(key === 'status' && value === 'done' ? { progress: 100 } : {}), ...(key === 'status' && prev.status === 'done' && value !== 'done' ? { progress: 0 } : {}) }))
   async function submit(e) {
     e.preventDefault(); setError('')
-    if (task && preventsTaskUpdate(task, form.status, form.progress, gate)) return setError('Debes resolver las predecesoras e impedimentos pendientes antes de avanzar esta tarea.')
+    if (task && preventsTaskUpdate(task, form.status, form.progress, gateForUpdate ? gateForUpdate(form.status,form.progress) : gate)) return setError('Debes resolver las predecesoras e impedimentos pendientes antes de avanzar esta tarea.')
     if (form.title.trim().length < 3) return setError('Escribe un título de al menos 3 caracteres.')
     if (form.start_date && form.due_date && form.due_date < form.start_date) return setError('La fecha de término no puede ser anterior al inicio.')
     if (form.status !== 'done' && Number(form.progress) === 100) return setError('Para registrar 100%, selecciona Finalizada.')
@@ -32,10 +32,10 @@ function TaskEditor({ task, gate, busy, onCancel, onSave }) {
     <form onSubmit={submit} className="pm-task-form">
       <label>Título *<input autoFocus required maxLength={180} minLength={3} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Ej. Diseñar la pantalla de seguimiento" /></label>
       <label>Descripción<textarea rows={3} maxLength={4000} value={form.description} onChange={e => set('description', e.target.value)} placeholder="Criterios de aceptación y detalles" /></label>
-      <div className="pm-task-fields"><label>Estado<select value={form.status} onChange={e => set('status', e.target.value)}>{Object.entries(STATUSES).map(([id, label]) => <option key={id} value={id} disabled={!!task && gate.blocked && ACTIVE_STATES.has(id) && task.status !== id}>{label}</option>)}</select></label>
+      <div className="pm-task-fields"><label>Estado<select value={form.status} onChange={e => set('status', e.target.value)}>{Object.entries(STATUSES).map(([id, label]) => <option key={id} value={id} disabled={!!task && gateForUpdate?.(id, id === 'done' ? 100 : form.progress).blocked && ACTIVE_STATES.has(id) && task.status !== id}>{label}</option>)}</select></label>
       <label>Prioridad<select value={form.priority} onChange={e => set('priority', e.target.value)}>{Object.entries(PRIORITIES).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label></div>
       <div className="pm-task-fields"><label>Inicio<input type="date" value={form.start_date} onChange={e => set('start_date', e.target.value)} /></label><label>Entrega<input type="date" min={form.start_date || undefined} value={form.due_date} onChange={e => set('due_date', e.target.value)} /></label></div>
-      {gate?.blocked && <div className="pm-block-note" role="status">Esta tarea tiene restricciones pendientes: {reasonText(gate)}. Puedes cambiar su descripción, prioridad o marcarla Bloqueada, pero no avanzar hasta resolverlas.</div>}
+      {gateForUpdate?.(form.status,form.progress)?.blocked && <div className="pm-block-note" role="status">Esta tarea tiene restricciones pendientes: {reasonText(gate)}. Puedes cambiar su descripción, prioridad o marcarla Bloqueada, pero no avanzar hasta resolverlas.</div>}
       <label>Avance: <strong>{form.progress}%</strong><input type="range" min="0" max="100" step="5" value={form.progress} disabled={form.status === 'done'} onChange={e => set('progress', Number(e.target.value))} /></label>
       {error && <p className="pm-task-error" role="alert">{error}</p>}
       <div className="pm-task-actions"><button type="button" className="pm-task-secondary" onClick={onCancel}>Cancelar</button><button type="submit" className="pm-task-primary" disabled={busy}>{busy ? 'Guardando...' : 'Guardar tarea'}</button></div>
@@ -51,7 +51,7 @@ async function fetchAll(getPage, pageSize) {
   }
 }
 
-export default function TasksPage({ getAccessToken, focusDependencies = false }) {
+export default function TasksPage({ getAccessToken, currentUserId, focusDependencies = false }) {
   const [projects, setProjects] = useState([])
   const [projectId, setProjectId] = useState('')
   const [tasks, setTasks] = useState([])
@@ -105,6 +105,7 @@ export default function TasksPage({ getAccessToken, focusDependencies = false })
   useEffect(() => { load() }, [load])
   const project = projects.find(p => p.id === projectId)
   const readonly = project?.status === 'archived'
+  const isAdmin = members.some(m=>m.user_id===currentUserId && ['admin','owner'].includes(m.role)) || project?.owner_id===currentUserId
   const taskMap = useMemo(() => new Map(allTasks.map(t => [t.id, t])), [allTasks])
   const visible = useMemo(() => tasks.filter(t => {
     const summary = dependencySummary(t.id, dependencies, taskMap)
@@ -154,7 +155,7 @@ export default function TasksPage({ getAccessToken, focusDependencies = false })
     setBusy(true); setError(''); setNotice('')
     try {
       const nextProgress = nextStatus === 'done' ? 100 : task.status === 'done' ? 0 : task.progress
-      const gate = taskBlockReasons(task, allTasks, dependencies, blockers)
+      const gate = taskBlockReasons(task, allTasks, dependencies, blockers,{nextStatus,nextProgress})
       if (preventsTaskUpdate(task, nextStatus, nextProgress, gate)) throw new Error(`No puedes avanzar esta tarea: ${reasonText(gate)}.`)
       await updateTask(getAccessToken, projectId, task.id, { status: nextStatus, progress: nextProgress }); await load()
     }
@@ -168,10 +169,10 @@ export default function TasksPage({ getAccessToken, focusDependencies = false })
     {error && <p role="alert" className="pm-task-error">{error}</p>}{notice && <p role="status" className="pm-task-notice">{notice}</p>}
     <div className="pm-task-stats"><article><span>Total de tareas</span><strong>{total}</strong></article><article><span>Completadas en esta página</span><strong>{doneCount}</strong></article><article><span>Avance medio en esta página</span><strong>{completion}%</strong></article></div>
     <section className="pm-task-panel"><div className="pm-task-toolbar"><label>Buscar<input type="search" placeholder="Título o descripción" value={search} onChange={e => setSearch(e.target.value)} /></label><label>Estado<select value={status} onChange={e => setStatus(e.target.value)}><option value="all">Todos</option>{Object.entries(STATUSES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Prioridad<select value={priority} onChange={e => setPriority(e.target.value)}><option value="all">Todas</option>{Object.entries(PRIORITIES).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Dependencias<select value={dependencyFilter} onChange={e => setDependencyFilter(e.target.value)}><option value="all">Todas</option><option value="waiting">Con requisitos pendientes</option><option value="ready">Predecesoras completas</option><option value="none">Sin dependencias</option></select></label><button className="pm-task-secondary" onClick={load} disabled={loading}>↻ Actualizar</button></div>
-      {loading ? <div className="pm-task-empty">Cargando tareas…</div> : !projectId ? <div className="pm-task-empty">Primero crea un proyecto en la sección Proyectos.</div> : !visible.length ? <div className="pm-task-empty">No hay tareas con esos filtros. Crea la primera tarea del proyecto.</div> : <div className="pm-task-grid">{visible.map(task => <article className="pm-task-card" data-gated={taskBlockReasons(task, allTasks, dependencies, blockers).blocked} key={task.id}>
+      {loading ? <div className="pm-task-empty">Cargando tareas…</div> : !projectId ? <div className="pm-task-empty">Primero crea un proyecto en la sección Proyectos.</div> : !visible.length ? <div className="pm-task-empty">No hay tareas con esos filtros. Crea la primera tarea del proyecto.</div> : <div className="pm-task-grid">{visible.map(task => <article className="pm-task-card" data-gated={taskBlockReasons(task,allTasks,dependencies,blockers).blocked} key={task.id}>
         <div className="pm-task-card-head"><span className="pm-task-status" data-status={task.status}>{STATUSES[task.status]}</span><span className="pm-task-priority" data-priority={task.priority}>{PRIORITIES[task.priority]}</span></div>
         <h3>{task.title}</h3>{task.description && <p>{task.description}</p>}
-        {(() => { const gate = taskBlockReasons(task, allTasks, dependencies, blockers); return gate.blocked && <div className="pm-block-flag" role="status">⛔ Avance restringido · {reasonText(gate)}{gate.open.map(b => <small key={b.id}>Impedimento: {b.title}</small>)}{gate.pending.map(p => <small key={p.id}>Falta terminar: {p.title}</small>)}</div> })()}
+        {(() => { const gate = taskBlockReasons(task, allTasks, dependencies, blockers); return (gate.blocked || gate.warnings.length || gate.advisory.length) && <div className="pm-block-flag" role="status">{gate.blocked?'⛔ Avance restringido · '+reasonText(gate):'ℹ Advertencias informativas'}{gate.open.map(b => <small key={b.id}>Impedimento: {b.title}</small>)}{gate.pending.map(p => <small key={p.id}>Predecesora: {p.title}</small>)}{gate.warnings.map((p,i)=><small key={i}>Advertencia: {p.title}</small>)}{gate.advisory.map(p=><small key={p.id}>Impedimento informativo: {p.title}</small>)}</div> })()}
         <div className="pm-task-dates"><span>Inicio: {displayDate(task.start_date)}</span><span>Entrega: {displayDate(task.due_date)}</span></div>
         <div className="pm-task-progress-head"><span>Avance</span><strong>{task.progress}%</strong></div><div className="pm-task-progress"><span style={{ width: `${task.progress}%` }}/></div>
         <div className="pm-task-dependency"><div>{(() => {
@@ -179,11 +180,11 @@ export default function TasksPage({ getAccessToken, focusDependencies = false })
           return <small className={info.pending.length ? 'pm-dep-waiting' : 'pm-dep-ready'}>{!info.hasDependencies ? 'Sin predecesoras' : info.pending.length ? `◷ Espera ${info.pending.length} tarea(s)` : '✓ Predecesoras finalizadas'} · {info.successors.length} sucesora(s)</small>
         })()}</div><button type="button" className="pm-task-secondary" disabled={busy} onClick={() => setDependencyTask(task)}>Ver dependencias</button></div>
         <div className="pm-task-assign"><strong>Responsables</strong>{members.length ? <div className="pm-task-people">{members.map(member => <label key={member.user_id}><input type="checkbox" checked={task.assignees.includes(member.user_id)} disabled={readonly || busy} onChange={() => changeAssignee(task, member.user_id)} /><span>{member.full_name || `Integrante ${member.user_id.slice(0,8)}`}</span></label>)}</div> : <small>No hay integrantes activos disponibles.</small>}</div>
-        <div className="pm-task-footer"><select aria-label={`Cambiar estado de ${task.title}`} value={task.status} disabled={readonly || busy} onChange={e => quickStatus(task, e.target.value)}>{Object.entries(STATUSES).map(([value,label]) => <option key={value} value={value} disabled={taskBlockReasons(task, allTasks, dependencies, blockers).blocked && ACTIVE_STATES.has(value) && task.status !== value}>{label}</option>)}</select><button className="pm-task-secondary" disabled={readonly || busy} onClick={() => setEditor(task)}>Editar</button><button className="pm-task-delete" disabled={readonly || busy} onClick={() => remove(task)}>Eliminar</button></div>
+        <div className="pm-task-footer"><select aria-label={`Cambiar estado de ${task.title}`} value={task.status} disabled={readonly || busy} onChange={e => quickStatus(task, e.target.value)}>{Object.entries(STATUSES).map(([value,label]) => <option key={value} value={value} disabled={taskBlockReasons(task,allTasks,dependencies,blockers,{nextStatus:value,nextProgress:value==='done'?100:task.progress}).blocked && ACTIVE_STATES.has(value) && task.status !== value}>{label}</option>)}</select><button className="pm-task-secondary" disabled={readonly || busy} onClick={() => setEditor(task)}>Editar</button><button className="pm-task-delete" disabled={readonly || busy} onClick={() => remove(task)}>Eliminar</button></div>
       </article>)}</div>}
       <div className="pm-task-pages"><small>Mostrando {visible.length} de {total} tareas (filtros sobre la página actual)</small><div><button className="pm-task-secondary" disabled={offset === 0 || loading} onClick={() => setOffset(n => Math.max(n - limit, 0))}>Anterior</button><button className="pm-task-secondary" disabled={offset + limit >= total || loading} onClick={() => setOffset(n => n + limit)}>Siguiente</button></div></div>
     </section>
-    {dependencyTask && <DependencyManager key={dependencyTask.id} task={dependencyTask} allTasks={allTasks} dependencies={dependencies} busy={busy} readonly={readonly} onClose={() => setDependencyTask(null)} onAdd={addDependency} onUpdate={editDependency} onDelete={removeDependency} />}
-    {editor !== undefined && <TaskEditor key={editor?.id || 'new'} task={editor} gate={editor ? taskBlockReasons(editor, allTasks, dependencies, blockers) : { blocked: false, pending: [], open: [] }} busy={busy} onSave={save} onCancel={() => setEditor(undefined)} />}
+    {dependencyTask && <DependencyManager key={dependencyTask.id} task={dependencyTask} allTasks={allTasks} dependencies={dependencies} busy={busy} readonly={readonly} isAdmin={isAdmin} methodology={project?.methodology || 'hybrid'} onClose={() => setDependencyTask(null)} onAdd={addDependency} onUpdate={editDependency} onDelete={removeDependency} />}
+    {editor !== undefined && <TaskEditor key={editor?.id || 'new'} task={editor} gate={editor ? taskBlockReasons(editor, allTasks, dependencies, blockers) : { blocked: false, pending: [], open: [] }} gateForUpdate={editor ? (status,progress)=>taskBlockReasons(editor,allTasks,dependencies,blockers,{nextStatus:status,nextProgress:progress}) : undefined} busy={busy} onSave={save} onCancel={() => setEditor(undefined)} />}
   </div>
 }

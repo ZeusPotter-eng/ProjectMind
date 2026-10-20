@@ -5,7 +5,7 @@ import './blockers.css'
 
 const SEVERITIES = { low: 'Baja', medium: 'Media', high: 'Alta', critical: 'Crítica' }
 const STATUSES = { open: 'Abierto', resolved: 'Resuelto', dismissed: 'Descartado' }
-const BLANK = { title: '', description: '', task_id: '', severity: 'medium' }
+const BLANK = { title: '', description: '', task_id: '', severity: 'medium', is_blocking: false }
 
 async function fetchAll(getPage, size) {
   const rows = []
@@ -17,7 +17,7 @@ async function fetchAll(getPage, size) {
 }
 
 function BlockerEditor({ initial, tasks, busy, onClose, onSave }) {
-  const [form, setForm] = useState(initial ? { title: initial.title, description: initial.description || '', task_id: initial.task_id || '', severity: initial.severity } : { ...BLANK })
+  const [form, setForm] = useState(initial ? { title: initial.title, description: initial.description || '', task_id: initial.task_id || '', severity: initial.severity, is_blocking: initial.is_blocking ?? true } : { ...BLANK })
   const [error, setError] = useState('')
   const set = (name, value) => setForm(prev => ({ ...prev, [name]: value }))
   async function submit(event) {
@@ -35,7 +35,7 @@ function BlockerEditor({ initial, tasks, busy, onClose, onSave }) {
         <label>Tarea afectada<select value={form.task_id} onChange={event => set('task_id', event.target.value)}><option value="">General del proyecto (no bloquea tareas)</option>{tasks.map(task => <option key={task.id} value={task.id}>{task.title}</option>)}</select></label>
         <label>Gravedad<select value={form.severity} onChange={event => set('severity', event.target.value)}>{Object.entries(SEVERITIES).map(([key, value]) => <option value={key} key={key}>{value}</option>)}</select></label>
       </div>
-      <small className="pm-block-hint">Solo los impedimentos abiertos vinculados a una tarea impiden aumentar su avance o iniciar/finalizar el trabajo.</small>
+      <label className="pm20-check"><input type="checkbox" checked={!!form.is_blocking} onChange={e=>set('is_blocking',e.target.checked)}/> Impedimento bloqueante (requiere rol administrador)</label><small className="pm-block-hint">Los impedimentos informativos solo notifican. Los bloqueantes restringen el avance de la tarea afectada.</small>
       {error && <p role="alert" className="pm-task-error">{error}</p>}
       <div className="pm-task-actions"><button type="button" className="pm-task-secondary" onClick={onClose}>Cancelar</button><button type="submit" disabled={busy} className="pm-task-primary">{busy ? 'Guardando...' : 'Guardar impedimento'}</button></div>
     </form>
@@ -113,7 +113,7 @@ export default function BlockersPage({ getAccessToken }) {
       {loading ? <div className="pm-task-empty">Cargando impedimentos…</div> : !projectId ? <div className="pm-task-empty">Crea primero un proyecto.</div> : !visible.length ? <div className="pm-task-empty">Sin impedimentos para este filtro.</div> : <div className="pm-task-grid">{visible.map(blocker => <article key={blocker.id} className="pm-task-card pm-block-card">
         <div className="pm-task-card-head"><span className="pm-block-state" data-status={blocker.status}>{STATUSES[blocker.status]}</span><span className="pm-task-priority" data-priority={blocker.severity}>{SEVERITIES[blocker.severity]}</span></div>
         <h3>{blocker.title}</h3>{blocker.description && <p>{blocker.description}</p>}
-        <p className="pm-block-linked">{blocker.task_id ? `Tarea: ${taskById.get(blocker.task_id)?.title || 'Tarea no disponible'}` : 'Impedimento general del proyecto'}</p>
+        <p className="pm-block-linked">{blocker.task_id ? `Tarea: ${taskById.get(blocker.task_id)?.title || 'Tarea no disponible'}` : 'Impedimento general del proyecto'}</p><small className="pm-block-hint">{blocker.is_blocking ? '🔒 Bloqueante' : 'ℹ Informativo'}</small>
         {blocker.resolved_at && <small className="pm-block-hint">Resuelto: {new Date(blocker.resolved_at).toLocaleString('es-MX')}</small>}
         <div className="pm-block-actions"><button type="button" className="pm-task-secondary" disabled={busy || archived} onClick={() => setEditor(blocker)}>Editar</button>{blocker.status === 'open' ? <><button type="button" className="pm-task-secondary" disabled={busy || archived} onClick={() => changeStatus(blocker, 'resolved')}>✓ Resolver</button><button type="button" className="pm-task-secondary" disabled={busy || archived} onClick={() => changeStatus(blocker, 'dismissed')}>Descartar</button></> : <button type="button" className="pm-task-secondary" disabled={busy || archived} onClick={() => changeStatus(blocker, 'open')}>Reabrir</button>}<button className="pm-task-delete" disabled={busy || archived} onClick={() => remove(blocker)}>Eliminar</button></div>
       </article>)}</div>}

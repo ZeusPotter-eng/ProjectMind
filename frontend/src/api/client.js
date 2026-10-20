@@ -33,8 +33,8 @@ export const getHealth = () => request('/health')
 export const getSupabaseHealth = () => request('/health/supabase')
 export const getModuleStatus = (module) => request(`/${module}/status`)
 export const getAssistantStatus = () => request('/assistant/status')
-export const sendAssistantMessage = (message, projectId = null) =>
-  request('/assistant/chat', {
+export const sendAssistantMessage = (getAccessToken, message, projectId = null) =>
+  projectsRequest('/assistant/chat', getAccessToken, {
     method: 'POST',
     body: JSON.stringify({ message, project_id: projectId }),
   })
@@ -169,3 +169,15 @@ export const updateBlocker = (getAccessToken, projectId, id, data) =>
 export const deleteBlocker = (getAccessToken, projectId, id) =>
   projectsRequest(`${blockerBase(projectId)}/${encodeURIComponent(id)}`, getAccessToken,
     { method: 'DELETE' })
+
+// PM-20: análisis y ejecución autorizada; todos los endpoints exigen JWT y RLS.
+const intelBase = (projectId) => `/projects/${encodeURIComponent(projectId)}/intelligence`
+export const analyzeProject = (token, projectId, focus = '', useLLM = false) => projectsRequest(`${intelBase(projectId)}/analyze`, token, {method:'POST',body:JSON.stringify({focus,create_proposals:true,use_llm:useLLM})})
+export const listAIProposals = (token, projectId) => projectsRequest(`${intelBase(projectId)}/proposals`,token)
+export const createAIProposal = (token,projectId,payload) => projectsRequest(`${intelBase(projectId)}/proposals`,token,{method:'POST',body:JSON.stringify(payload)})
+export const approveAIProposal = (token,projectId,id) => projectsRequest(`${intelBase(projectId)}/proposals/${encodeURIComponent(id)}/approve`,token,{method:'POST'})
+export const rejectAIProposal = (token,projectId,id) => projectsRequest(`${intelBase(projectId)}/proposals/${encodeURIComponent(id)}/reject`,token,{method:'POST'})
+export const getAIPolicy = (token,projectId) => projectsRequest(`${intelBase(projectId)}/policy`,token)
+export const updateAIPolicy = (token,projectId,data) => projectsRequest(`${intelBase(projectId)}/policy`,token,{method:'PUT',body:JSON.stringify(data)})
+
+export const listAIActivity = (token,projectId) => projectsRequest(`${intelBase(projectId)}/activity?limit=50`,token)

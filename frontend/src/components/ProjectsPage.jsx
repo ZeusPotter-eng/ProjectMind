@@ -3,6 +3,7 @@ import { archiveProject, createProject, listProjects, updateProject } from '../a
 import './projects.css'
 import ProjectMembersPanel from './ProjectMembersPanel'
 
+const METHODS = { scrum: 'Scrum / Sprints', traditional: 'Tradicional (predictiva)', hybrid: 'Híbrida' }
 const STATUSES = {
   planning: 'Planeación',
   active: 'Activo',
@@ -11,7 +12,7 @@ const STATUSES = {
   archived: 'Archivado',
 }
 
-const EMPTY_FORM = { name: '', objective: '', description: '', status: 'planning', start_date: '', due_date: '' }
+const EMPTY_FORM = { name: '', objective: '', description: '', status: 'planning', methodology: 'hybrid', start_date: '', due_date: '' }
 
 function formatDate(date) {
   if (!date) return 'Sin fecha'
@@ -25,6 +26,7 @@ function ProjectForm({ project, saving, onSave, onCancel }) {
     objective: project.objective,
     description: project.description || '',
     status: project.status,
+    methodology: project.methodology || 'hybrid',
     start_date: project.start_date || '',
     due_date: project.due_date || '',
   } : EMPTY_FORM)
@@ -43,7 +45,7 @@ function ProjectForm({ project, saving, onSave, onCancel }) {
       await onSave({
         name: form.name.trim(), objective: form.objective.trim(),
         description: form.description.trim() || null,
-        status: form.status,
+        status: form.status, methodology: form.methodology,
         start_date: form.start_date || null,
         due_date: form.due_date || null,
       })
@@ -59,6 +61,7 @@ function ProjectForm({ project, saving, onSave, onCancel }) {
       <label><span>Nombre del proyecto <b>*</b></span><input required minLength={3} maxLength={150} autoFocus value={form.name} onChange={e => update('name', e.target.value)} placeholder="Ej. Plataforma de gestión escolar" /></label>
       <label><span>Objetivo principal <b>*</b></span><textarea required minLength={5} maxLength={2000} rows={3} value={form.objective} onChange={e => update('objective', e.target.value)} placeholder="¿Qué se desea conseguir con este proyecto?" /></label>
       <label><span>Descripción (opcional)</span><textarea maxLength={5000} rows={3} value={form.description} onChange={e => update('description', e.target.value)} placeholder="Contexto, alcance y detalles principales" /></label>
+      <label>Metodología de gestión<select value={form.methodology} onChange={e => update('methodology',e.target.value)}>{Object.entries(METHODS).map(([id,name]) => <option value={id} key={id}>{name}</option>)}</select><small>Establece las reglas sugeridas de nuevas dependencias; cada relación mantiene su propia configuración.</small></label>
       <div className="pm-project-fields">
         <label>Estado<select value={form.status} onChange={e => update('status', e.target.value)}>{Object.entries(STATUSES).filter(([value]) => value !== 'archived' || project?.status === 'archived').map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>Fecha de inicio<input type="date" value={form.start_date} onChange={e => update('start_date', e.target.value)} /></label>
@@ -152,7 +155,7 @@ export default function ProjectsPage({ getAccessToken, currentUserId, onShowTime
       {notice && <p className="pm-project-alert success" role="status">{notice}</p>}
       {loading ? <div className="pm-project-empty">Cargando proyectos…</div> : visible.length === 0 ? <div className="pm-project-empty"><span>◇</span><h3>{projects.length ? 'Sin coincidencias' : 'Aún no hay proyectos para mostrar'}</h3><p>{projects.length ? 'Prueba otros filtros de búsqueda.' : 'Haz clic en “Nuevo proyecto” para comenzar.'}</p></div> : <div className="pm-project-cards">{visible.map(project => <article className="pm-project-card" key={project.id}>
         <div className="pm-project-card-title"><div><span className="pm-project-status" data-status={project.status}>{STATUSES[project.status] || project.status}</span><h3>{project.name}</h3></div><span className="pm-project-id" title={project.id}>#{project.id.slice(0, 8)}</span></div>
-        <p className="pm-project-objective">{project.objective}</p>
+        <p className="pm-project-objective">{project.objective}</p><p className="pm-project-description">Metodología: <strong>{METHODS[project.methodology] || 'Híbrida'}</strong></p>
         {project.description && <p className="pm-project-description">{project.description}</p>}
         <div className="pm-project-meta"><span>Inicio: <b>{formatDate(project.start_date)}</b></span><span>Término: <b>{formatDate(project.due_date)}</b></span></div>
         <div className="pm-project-card-actions"><button type="button" className="pm-project-secondary" onClick={() => setMembersProject(project)}>Integrantes</button>{project.owner_id === currentUserId ? <><button type="button" className="pm-project-secondary" onClick={() => setFormMode(project)}>Editar</button>{project.status !== 'archived' && <button type="button" className="pm-project-danger-link" onClick={() => setConfirmArchive(project)}>Archivar</button>}</> : <span className="pm-project-readonly">Proyecto compartido · revisa tus permisos en Integrantes</span>}</div>
