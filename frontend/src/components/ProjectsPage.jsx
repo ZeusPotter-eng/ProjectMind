@@ -133,7 +133,7 @@ export default function ProjectsPage({ getAccessToken, currentUserId, onShowTime
   return <div className="pm-project-page">
     <header className="pm-project-header">
       <div><span className="eyebrow">PROJECTMIND · PM-13</span><h1>Mis proyectos</h1><p>Crea, organiza y da seguimiento a tus proyectos desde un solo lugar.</p></div>
-      <div className="pm-project-header-buttons"><button type="button" className="pm-project-secondary" onClick={onShowTimeline}>▥ Ver cronograma</button><button type="button" className="pm-project-primary" onClick={() => { setFormMode('new'); setError(''); setNotice('') }}>+ Nuevo proyecto</button></div>
+      <div className="pm-project-header-buttons"><button type="button" className="pm-project-secondary" onClick={onShowTimeline} disabled={!onShowTimeline}>▥ Ver cronograma</button><button type="button" className="pm-project-primary" onClick={() => { setFormMode('new'); setError(''); setNotice('') }}>+ Nuevo proyecto</button></div>
     </header>
 
     <div className="pm-project-overview">
@@ -154,7 +154,7 @@ export default function ProjectsPage({ getAccessToken, currentUserId, onShowTime
       {error && <p className="pm-project-alert error" role="alert">{error}</p>}
       {notice && <p className="pm-project-alert success" role="status">{notice}</p>}
       {loading ? <div className="pm-project-empty">Cargando proyectos…</div> : visible.length === 0 ? <div className="pm-project-empty"><span>◇</span><h3>{projects.length ? 'Sin coincidencias' : 'Aún no hay proyectos para mostrar'}</h3><p>{projects.length ? 'Prueba otros filtros de búsqueda.' : 'Haz clic en “Nuevo proyecto” para comenzar.'}</p></div> : <div className="pm-project-cards">{visible.map(project => <article className="pm-project-card" key={project.id}>
-        <div className="pm-project-card-title"><div><span className="pm-project-status" data-status={project.status}>{STATUSES[project.status] || project.status}</span><h3>{project.name}</h3></div><span className="pm-project-id" title={project.id}>#{project.id.slice(0, 8)}</span></div>
+        <div className="pm-project-card-title"><div><span className="pm-project-tile-icon" aria-hidden="true">▦</span><span className="pm-project-status" data-status={project.status}>{STATUSES[project.status] || project.status}</span><h3>{project.name}</h3></div><span className="pm-project-id" title={project.id}>#{String(project.id).slice(0, 8)}</span></div>
         <p className="pm-project-objective">{project.objective}</p><p className="pm-project-description">Metodología: <strong>{METHODS[project.methodology] || 'Híbrida'}</strong></p>
         {project.description && <p className="pm-project-description">{project.description}</p>}
         <div className="pm-project-meta"><span>Inicio: <b>{formatDate(project.start_date)}</b></span><span>Término: <b>{formatDate(project.due_date)}</b></span></div>
