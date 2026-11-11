@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getHealth, getSupabaseHealth, getAssistantStatus } from './api/client'
+import AssistantChatPanel from './components/AssistantChatPanel'
+import useAssistantConversation from './hooks/useAssistantConversation'
 import CrudConsole from './components/CrudConsole'
 import ProjectsPage from './components/ProjectsPage'
 import TimelinePage from './components/TimelinePage'
@@ -51,6 +53,8 @@ function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [theme, setTheme] = useState(() => { try { return localStorage.getItem('projectmind-theme') || 'dark' } catch { return 'dark' } })
   const [search, setSearch] = useState('')
+  const [assistantFloatingOpen, setAssistantFloatingOpen] = useState(false)
+  const assistantChat = useAssistantConversation(getAccessToken)
   const [backendStatus, setBackendStatus] = useState({ loading: true, connected: false, message: 'Comprobando conexión con FastAPI...' })
   const [assistantStatus, setAssistantStatus] = useState({ loading: true, provider: '', configured: false, humanInTheLoop: true })
   const [supabaseStatus, setSupabaseStatus] = useState({ loading: true, connected: false, message: 'Comprobando conexión con Supabase...' })
@@ -119,7 +123,46 @@ function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
     try { localStorage.removeItem(`projectmind-team-photo-${memberId}`) } catch { /* localStorage opcional */ }
   }
 
-  function navigate(name) { setActiveModule(name); setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+  function navigate(name) { setActiveModule(name); setMobileMenuOpen(false); setAssistantFloatingOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
+
+  function openAssistant() {
+    if (activeModule === 'Asistente IA') {
+      document.getElementById('pm-ai-message-page')?.focus()
+    } else {
+      setAssistantFloatingOpen(true)
+    }
+  }
+
+  function renderAssistantChat(mode) {
+    return <AssistantChatPanel
+      mode={mode}
+      messages={assistantChat.messages}
+      draft={assistantChat.draft}
+      onDraftChange={assistantChat.setDraft}
+      sending={assistantChat.sending}
+      onSend={assistantChat.send}
+      onClear={assistantChat.clear}
+      onClose={mode === 'floating' ? () => setAssistantFloatingOpen(false) : undefined}
+      onOpenFullPage={() => navigate('Asistente IA')}
+      projects={assistantChat.projects}
+      projectId={assistantChat.projectId}
+      onProjectChange={assistantChat.setProjectId}
+      loadingProjects={assistantChat.loadingProjects}
+      projectsError={assistantChat.projectsError}
+      provider={assistantStatus.provider}
+      providerConfigured={assistantStatus.configured}
+    />
+  }
+
+  function renderAssistantPage() {
+    return <section className="pm-ai-workspace">
+      <div className="pm-ai-workspace__heading">
+        <div><span className="eyebrow">INTELIGENCIA ARTIFICIAL · ASISTENTE</span><h1>Habla con ProjectMind AI</h1><p>Conversa con el modelo conectado al backend. Para generar propuestas que modifiquen tareas o fechas, utiliza el módulo Propuestas IA y su proceso de aprobación.</p></div>
+        <button type="button" onClick={() => navigate('Propuestas IA')}>Ver propuestas IA ↗</button>
+      </div>
+      {renderAssistantChat('page')}
+    </section>
+  }
 
   const backendClass = backendStatus.loading ? 'connection-pill loading' : backendStatus.connected ? 'connection-pill online' : 'connection-pill offline'
   const current = moduleMap[activeModule]
@@ -181,7 +224,7 @@ function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
   const allModules = NAV_GROUPS.flatMap(group => group.items)
   const searchResults = search.trim() ? allModules.filter(name => name.toLowerCase().includes(search.trim().toLowerCase())) : []
   const icons = { Dashboard: '⌂', Proyectos: '▣', Cronograma: '▤', Tareas: '☑', Requisitos: '≡', Dependencias: '◇', Bloqueos: '⚑', Documentos: '▤', Reuniones: '◷', 'Asistente IA': '✧', 'Propuestas IA': '✦', Reportes: '▥', Auditoría: '◈', 'Consola CRUD': '⌘', 'Mi perfil': '◉' }
-  const renderModule = () => activeModule === 'Dashboard' ? <DashboardModern /> : activeModule === 'Configuración' ? <SettingsPage /> : activeModule === 'Consola CRUD' ? <CrudPage /> : (activeModule === 'Tareas' || activeModule === 'Dependencias') ? <TasksPage key={activeModule} currentUserId={currentUser?.id} getAccessToken={getAccessToken} focusDependencies={activeModule === 'Dependencias'} /> : activeModule === 'Bloqueos' ? <BlockersPage getAccessToken={getAccessToken} /> : (activeModule === 'Propuestas IA' || activeModule === 'Asistente IA') ? <IntelligencePage getAccessToken={getAccessToken} currentUserId={currentUser?.id} /> : activeModule === 'Proyectos' ? <ProjectsPage getAccessToken={getAccessToken} currentUserId={currentUser?.id} onShowTimeline={() => navigate('Cronograma')} /> : activeModule === 'Cronograma' ? <TimelinePage getAccessToken={getAccessToken} onOpenProjects={() => navigate('Proyectos')} /> : activeModule === 'Mi perfil' ? <ProfilePage getAccessToken={getAccessToken} currentUser={currentUser} onProfileUpdated={onProfileUpdated} sessionInfo={sessionInfo} onShowProjects={() => navigate('Proyectos')} /> : <ModulePage />
+  const renderModule = () => activeModule === 'Dashboard' ? <DashboardModern /> : activeModule === 'Configuración' ? <SettingsPage /> : activeModule === 'Consola CRUD' ? <CrudPage /> : (activeModule === 'Tareas' || activeModule === 'Dependencias') ? <TasksPage key={activeModule} currentUserId={currentUser?.id} getAccessToken={getAccessToken} focusDependencies={activeModule === 'Dependencias'} /> : activeModule === 'Bloqueos' ? <BlockersPage getAccessToken={getAccessToken} /> : activeModule === 'Asistente IA' ? renderAssistantPage() : activeModule === 'Propuestas IA' ? <IntelligencePage getAccessToken={getAccessToken} currentUserId={currentUser?.id} /> : activeModule === 'Proyectos' ? <ProjectsPage getAccessToken={getAccessToken} currentUserId={currentUser?.id} onShowTimeline={() => navigate('Cronograma')} /> : activeModule === 'Cronograma' ? <TimelinePage getAccessToken={getAccessToken} onOpenProjects={() => navigate('Proyectos')} /> : activeModule === 'Mi perfil' ? <ProfilePage getAccessToken={getAccessToken} currentUser={currentUser} onProfileUpdated={onProfileUpdated} sessionInfo={sessionInfo} onShowProjects={() => navigate('Proyectos')} /> : <ModulePage />
 
   function DashboardModern() {
     return <>
@@ -202,9 +245,10 @@ function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
     </aside>
     {mobileMenuOpen && <button className="menu-backdrop" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación"/>}
     <div className="pm-main">
-      <header className="pm-topbar"><div className="topbar-left"><button className="icon-btn hamburger" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menú">☰</button><span className="breadcrumb">Espacio de trabajo</span><span className="breadcrumb-separator">/</span><strong>{activeModule}</strong></div><div className="topbar-right"><div className="global-search"><span>⌕</span><input aria-label="Buscar módulos" placeholder="Buscar en ProjectMind…" value={search} onChange={e => setSearch(e.target.value)}/>{searchResults.length > 0 && <div className="search-results">{searchResults.map(name => <button key={name} onClick={() => { navigate(name); setSearch('') }}>{name}</button>)}</div>}</div><button className="icon-btn theme-button" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title="Cambiar tema">{theme === 'dark' ? '☼' : '☾'}</button><button className="top-ai-btn" onClick={() => navigate('Asistente IA')}>✦ <span>Preguntar a la IA</span></button><button className="pm-avatar-button" onClick={() => navigate('Mi perfil')} title="Mi perfil" aria-label="Abrir mi perfil"><AvatarImage userId={currentUser?.id} name={currentUser?.profile_name || currentUser?.email} avatarPath={currentUser?.profile_avatar} getAccessToken={getAccessToken}/></button></div></header>
+      <header className="pm-topbar"><div className="topbar-left"><button className="icon-btn hamburger" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menú">☰</button><span className="breadcrumb">Espacio de trabajo</span><span className="breadcrumb-separator">/</span><strong>{activeModule}</strong></div><div className="topbar-right"><div className="global-search"><span>⌕</span><input aria-label="Buscar módulos" placeholder="Buscar en ProjectMind…" value={search} onChange={e => setSearch(e.target.value)}/>{searchResults.length > 0 && <div className="search-results">{searchResults.map(name => <button key={name} onClick={() => { navigate(name); setSearch('') }}>{name}</button>)}</div>}</div><button className="icon-btn theme-button" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title="Cambiar tema">{theme === 'dark' ? '☼' : '☾'}</button><button className="top-ai-btn" onClick={openAssistant}>✦ <span>Preguntar a la IA</span></button><button className="pm-avatar-button" onClick={() => navigate('Mi perfil')} title="Mi perfil" aria-label="Abrir mi perfil"><AvatarImage userId={currentUser?.id} name={currentUser?.profile_name || currentUser?.email} avatarPath={currentUser?.profile_avatar} getAccessToken={getAccessToken}/></button></div></header>
       <main className="page-content"><div className="pm-module-content">{renderModule()}</div></main>
     </div>
+    {assistantFloatingOpen && activeModule !== 'Asistente IA' && renderAssistantChat('floating')}
   </div>
 }
 
