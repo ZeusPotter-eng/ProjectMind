@@ -9,7 +9,7 @@ import TasksPage from './components/TasksPage'
 import BlockersPage from './components/BlockersPage'
 import IntelligencePage from './components/IntelligencePage'
 import ProfilePage from './components/ProfilePage'
-import AvatarImage from './components/AvatarImage'
+import AccountMenu from './components/AccountMenu'
 
 const TEAM_MEMBERS = [
   { id: 'jimmy', name: 'Jimmy', role: 'Desarrollador de ProjectMind', initials: 'JI' },
@@ -39,7 +39,7 @@ const NAV_GROUPS = [
   { label: 'Inteligencia', items: ['Asistente IA', 'Propuestas IA'] },
   { label: 'Análisis', items: ['Reportes', 'Auditoría'] },
   { label: 'Administración', items: ['Consola CRUD'] },
-  { label: 'Cuenta', items: ['Mi perfil'] },
+
 ]
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024
@@ -48,7 +48,7 @@ function getStoredPhoto(memberId) {
   try { return localStorage.getItem(`projectmind-team-photo-${memberId}`) || '' } catch { return '' }
 }
 
-function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
+function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo, onCopyMyId, idCopied, onSignOut }) {
   const [activeModule, setActiveModule] = useState('Dashboard')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [theme, setTheme] = useState(() => { try { return localStorage.getItem('projectmind-theme') || 'dark' } catch { return 'dark' } })
@@ -241,11 +241,11 @@ function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
       <div className="brand"><div className="brand-logo">✦</div><div><strong>ProjectMind</strong><small>AI WORKSPACE</small></div><button className="mobile-close icon-btn" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar menú">×</button></div>
       <div className="workspace-switch"><span className="workspace-avatar">P</span><div><strong>Mi espacio de trabajo</strong><small>Entorno del proyecto</small></div></div>
       <nav className="navigation" aria-label="Navegación principal">{NAV_GROUPS.map(group => <div className="nav-section" key={group.label}><p>{group.label}</p>{group.items.map(name => <button key={name} className={`nav-item ${activeModule === name ? 'selected' : ''}`} onClick={() => navigate(name)}><span className="nav-symbol">{icons[name] || '◇'}</span>{name}</button>)}</div>)}</nav>
-      <div className="sidebar-bottom"><div className="mini-system"><span className={`system-dot ${backendStatus.connected ? 'connected' : ''}`}/><div><strong>{backendStatus.loading ? 'Verificando conexión' : backendStatus.connected ? 'Backend conectado' : 'Backend desconectado'}</strong><small>Estado del sistema</small></div></div><button className="pm-sidebar-account" onClick={() => navigate('Mi perfil')}><span className="profile-circle"><AvatarImage userId={currentUser?.id} name={currentUser?.profile_name || currentUser?.email} avatarPath={currentUser?.profile_avatar} getAccessToken={getAccessToken}/></span><span><strong>{currentUser?.profile_name || currentUser?.email || 'Mi perfil'}</strong><small>Ver perfil</small></span></button><button className="pm-sidebar-settings" onClick={() => navigate('Configuración')}>⚙ Configuración</button></div>
+      <div className="sidebar-bottom"><div className="mini-system"><span className={`system-dot ${backendStatus.connected ? 'connected' : ''}`}/><div><strong>{backendStatus.loading ? 'Verificando conexión' : backendStatus.connected ? 'Backend conectado' : 'Backend desconectado'}</strong><small>Estado del sistema</small></div></div><button className="pm-sidebar-settings" onClick={() => navigate('Configuración')}>⚙ Configuración</button></div>
     </aside>
     {mobileMenuOpen && <button className="menu-backdrop" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar navegación"/>}
     <div className="pm-main">
-      <header className="pm-topbar"><div className="topbar-left"><button className="icon-btn hamburger" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menú">☰</button><span className="breadcrumb">Espacio de trabajo</span><span className="breadcrumb-separator">/</span><strong>{activeModule}</strong></div><div className="topbar-right"><div className="global-search"><span>⌕</span><input aria-label="Buscar módulos" placeholder="Buscar en ProjectMind…" value={search} onChange={e => setSearch(e.target.value)}/>{searchResults.length > 0 && <div className="search-results">{searchResults.map(name => <button key={name} onClick={() => { navigate(name); setSearch('') }}>{name}</button>)}</div>}</div><button className="icon-btn theme-button" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title="Cambiar tema">{theme === 'dark' ? '☼' : '☾'}</button><button className="top-ai-btn" onClick={openAssistant}>✦ <span>Preguntar a la IA</span></button><button className="pm-avatar-button" onClick={() => navigate('Mi perfil')} title="Mi perfil" aria-label="Abrir mi perfil"><AvatarImage userId={currentUser?.id} name={currentUser?.profile_name || currentUser?.email} avatarPath={currentUser?.profile_avatar} getAccessToken={getAccessToken}/></button></div></header>
+      <header className="pm-topbar"><div className="topbar-left"><button className="icon-btn hamburger" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menú">☰</button><span className="breadcrumb">Espacio de trabajo</span><span className="breadcrumb-separator">/</span><strong>{activeModule}</strong></div><div className="topbar-right"><div className="global-search"><span>⌕</span><input aria-label="Buscar módulos" placeholder="Buscar en ProjectMind…" value={search} onChange={e => setSearch(e.target.value)}/>{searchResults.length > 0 && <div className="search-results">{searchResults.map(name => <button key={name} onClick={() => { navigate(name); setSearch('') }}>{name}</button>)}</div>}</div><button className="icon-btn theme-button" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} title="Cambiar tema">{theme === 'dark' ? '☼' : '☾'}</button><button className="top-ai-btn" onClick={openAssistant}>✦ <span>Preguntar a la IA</span></button><AccountMenu user={currentUser} getAccessToken={getAccessToken} onOpenProfile={() => navigate('Mi perfil')} onCopyMyId={onCopyMyId} idCopied={idCopied} onSignOut={onSignOut}/></div></header>
       <main className="page-content"><div className="pm-module-content">{renderModule()}</div></main>
     </div>
     {assistantFloatingOpen && activeModule !== 'Asistente IA' && renderAssistantChat('floating')}
