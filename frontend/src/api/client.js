@@ -33,10 +33,10 @@ export const getHealth = () => request('/health')
 export const getSupabaseHealth = () => request('/health/supabase')
 export const getModuleStatus = (module) => request(`/${module}/status`)
 export const getAssistantStatus = () => request('/assistant/status')
-export const sendAssistantMessage = (getAccessToken, message, projectId = null) =>
+export const sendAssistantMessage = (getAccessToken, message, projectId = null, history = []) =>
   projectsRequest('/assistant/chat', getAccessToken, {
     method: 'POST',
-    body: JSON.stringify({ message, project_id: projectId }),
+    body: JSON.stringify({ message, project_id: projectId, history }),
   })
 
 export const getCrudStatus = () => request('/crud/status')

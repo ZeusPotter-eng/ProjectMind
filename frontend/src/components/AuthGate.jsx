@@ -1,7 +1,6 @@
 import { cloneElement, useCallback, useEffect, useRef, useState } from 'react'
 import { getAuthStatus, getCurrentUser, getMyProfile, loginUser, logoutUser, refreshSession, registerUser } from '../api/client'
 import { finishActivity, isSessionExpired, SESSION_DURATION_MS, sessionSummary, startActivity } from '../utils/sessionActivity'
-import AvatarImage from './AvatarImage'
 import './auth.css'
 
 // La versión anterior tenía cierre por inactividad. No conservar su sesión sin una fecha
@@ -215,16 +214,15 @@ export default function AuthGate({ children }) {
 
   if (loading) return <main className="auth-screen"><div className="auth-card"><span className="auth-symbol">PM</span><h1>Verificando sesión…</h1></div></main>
 
-  if (user) return <>
-    <div className="auth-identity" title={user.email}>
-      <AvatarImage className="auth-identity-avatar" userId={user.id} name={user.profile_name || user.email} avatarPath={user.profile_avatar} getAccessToken={getAccessToken} />
-      <span className="auth-identity-email">{user.profile_name || user.email}</span>
-      <button type="button" onClick={() => window.dispatchEvent(new Event('projectmind:open-profile'))}>Mi perfil</button>
-      <button type="button" title="Comparte este ID para que te agreguen a un proyecto" onClick={copyMyId}>{idCopied ? 'ID copiado' : 'Copiar mi ID'}</button>
-      <button type="button" onClick={() => void finish('manual')}>Cerrar sesión</button>
-    </div>
-    {cloneElement(children, { currentUser: user, getAccessToken, onProfileUpdated, sessionInfo })}
-  </>
+  if (user) return cloneElement(children, {
+    currentUser: user,
+    getAccessToken,
+    onProfileUpdated,
+    sessionInfo,
+    onCopyMyId: copyMyId,
+    idCopied,
+    onSignOut: () => void finish('manual'),
+  })
 
   return <main className="auth-screen"><section className="auth-card">
     <span className="auth-symbol">PM</span>

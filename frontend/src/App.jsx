@@ -6,8 +6,9 @@ import TimelinePage from './components/TimelinePage'
 import TasksPage from './components/TasksPage'
 import BlockersPage from './components/BlockersPage'
 import IntelligencePage from './components/IntelligencePage'
+import AssistantChat from './components/AssistantChat'
 import ProfilePage from './components/ProfilePage'
-import AvatarImage from './components/AvatarImage'
+import AccountMenu from './components/AccountMenu'
 
 const TEAM_MEMBERS = [
   { id: 'jimmy', name: 'Jimmy', role: 'Desarrollador de ProjectMind', initials: 'JI' },
@@ -37,7 +38,6 @@ const NAV_GROUPS = [
   { label: 'Inteligencia', items: ['Asistente IA', 'Propuestas IA'] },
   { label: 'Análisis', items: ['Reportes', 'Auditoría'] },
   { label: 'Administración', items: ['Consola CRUD'] },
-  { label: 'Cuenta', items: ['Mi perfil'] },
 ]
 
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024
@@ -46,7 +46,7 @@ function getStoredPhoto(memberId) {
   try { return localStorage.getItem(`projectmind-team-photo-${memberId}`) || '' } catch { return '' }
 }
 
-function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
+function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo, onCopyMyId, idCopied, onSignOut }) {
   const [activeModule, setActiveModule] = useState('Dashboard')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [backendStatus, setBackendStatus] = useState({ loading: true, connected: false, message: 'Comprobando conexión con FastAPI...' })
@@ -182,8 +182,8 @@ function App({ getAccessToken, currentUser, onProfileUpdated, sessionInfo }) {
     </aside>
     {mobileMenuOpen && <button className="sidebar-overlay" aria-label="Cerrar menú" onClick={()=>setMobileMenuOpen(false)}/>} 
     <div className="main-shell">
-      <header className="topbar"><button className="menu-button" onClick={()=>setMobileMenuOpen(true)}>◆</button><div><small>ProjectMind /</small><strong>{activeModule}</strong></div><div className="topbar-actions"><span className={backendClass}><span className="status-dot"/>{backendStatus.connected?'Online':'Offline'}</span><button type="button" className="user-avatar" title="Abrir mi perfil" aria-label="Abrir mi perfil" onClick={() => navigate('Mi perfil')}><AvatarImage className="pm-topbar-avatar" userId={currentUser?.id} name={currentUser?.profile_name || currentUser?.email} avatarPath={currentUser?.profile_avatar} getAccessToken={getAccessToken} /></button></div></header>
-      <main className="workspace">{activeModule==='Dashboard' ? <Dashboard/> : activeModule==='Configuración' ? <SettingsPage/> : activeModule==='Consola CRUD' ? <CrudPage/> : (activeModule==='Tareas' || activeModule==='Dependencias') ? <TasksPage key={activeModule} currentUserId={currentUser?.id} getAccessToken={getAccessToken} focusDependencies={activeModule==='Dependencias'} /> : activeModule==='Bloqueos' ? <BlockersPage getAccessToken={getAccessToken}/> : (activeModule==='Propuestas IA' || activeModule==='Asistente IA') ? <IntelligencePage getAccessToken={getAccessToken} currentUserId={currentUser?.id}/> : activeModule==='Proyectos' ? <ProjectsPage getAccessToken={getAccessToken} currentUserId={currentUser?.id} onShowTimeline={() => navigate('Cronograma')}/> : activeModule === 'Cronograma' ? <TimelinePage getAccessToken={getAccessToken} onOpenProjects={() => navigate('Proyectos')}/> : activeModule === 'Mi perfil' ? <ProfilePage getAccessToken={getAccessToken} currentUser={currentUser} onProfileUpdated={onProfileUpdated} sessionInfo={sessionInfo} onShowProjects={() => navigate('Proyectos')}/> : <ModulePage/>}</main>
+      <header className="topbar"><button className="menu-button" onClick={()=>setMobileMenuOpen(true)}>◆</button><div><small>ProjectMind /</small><strong>{activeModule}</strong></div><div className="topbar-actions"><span className={backendClass}><span className="status-dot"/>{backendStatus.connected?'Online':'Offline'}</span><AccountMenu user={currentUser} getAccessToken={getAccessToken} onOpenProfile={() => navigate('Mi perfil')} onCopyMyId={onCopyMyId} idCopied={idCopied} onSignOut={onSignOut}/></div></header>
+      <main className="workspace">{activeModule==='Dashboard' ? <Dashboard/> : activeModule==='Configuración' ? <SettingsPage/> : activeModule==='Consola CRUD' ? <CrudPage/> : (activeModule==='Tareas' || activeModule==='Dependencias') ? <TasksPage key={activeModule} currentUserId={currentUser?.id} getAccessToken={getAccessToken} focusDependencies={activeModule==='Dependencias'} /> : activeModule==='Bloqueos' ? <BlockersPage getAccessToken={getAccessToken}/> : (activeModule==='Propuestas IA') ? <IntelligencePage getAccessToken={getAccessToken} currentUserId={currentUser?.id}/> : activeModule==='Proyectos' ? <ProjectsPage getAccessToken={getAccessToken} currentUserId={currentUser?.id} onShowTimeline={() => navigate('Cronograma')}/> : activeModule === 'Cronograma' ? <TimelinePage getAccessToken={getAccessToken} onOpenProjects={() => navigate('Proyectos')}/> : activeModule === 'Mi perfil' ? <ProfilePage getAccessToken={getAccessToken} currentUser={currentUser} onProfileUpdated={onProfileUpdated} sessionInfo={sessionInfo} onShowProjects={() => navigate('Proyectos')}/> : activeModule==='Asistente IA' ? null : <ModulePage/>}<AssistantChat getAccessToken={getAccessToken} mode={activeModule==='Asistente IA' ? 'page' : 'widget'} /></main>
     </div>
   </div>
 }
